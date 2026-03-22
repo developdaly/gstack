@@ -1,0 +1,66 @@
+---
+name: missioncontrol
+version: 1.0.0
+description: |
+  Visual Kanban board for managing agent tasks through a pipeline of gstack skills.
+  Drag cards between columns (Backlog → Office Hours → CEO Review → Eng Review →
+  Design → Implementation → Code Review → QA → Ship → Done) to trigger the
+  corresponding skill. Use when asked to "open mission control", "show the board",
+  "add a task", or "what needs to be done".
+allowed-tools:
+  - Bash
+  - Read
+  - AskUserQuestion
+
+---
+
+{{PREAMBLE}}
+
+# Mission Control: Visual Agent Task Manager
+
+Kanban board for managing agent tasks through gstack's skill pipeline.
+
+## Quick Start
+
+```bash
+$K start          # Start Mission Control server
+$K open           # Open board in browser
+$K show           # Print board state to terminal
+$K add "title"    # Add card to backlog
+$K move <id> <col> # Move card to column
+$K process        # List pending cards for execution
+$K stop           # Stop server
+```
+
+## Column Pipeline
+
+| Column | Skill | Purpose |
+|--------|-------|---------|
+| Backlog | — | New tasks |
+| Office Hours | /office-hours | Reframe the problem |
+| CEO Review | /plan-ceo-review | Find the 10-star product |
+| Eng Review | /plan-eng-review | Lock architecture |
+| Design Review | /plan-design-review | Rate design dimensions |
+| Design | /design-consultation | Build design system |
+| Implementation | — | Agent writes code |
+| Code Review | /review | Pre-landing review |
+| Debug | /debug | Root-cause investigation |
+| QA | /qa | Browser-based testing |
+| Ship | /ship | Test, review, push, PR |
+| Docs | /document-release | Update docs |
+| Retro | /retro | Weekly retrospective |
+| Done | — | Completed |
+
+## Processing Pending Cards
+
+When `$K process` shows pending cards, execute the corresponding skill for each:
+
+1. Read the card's title and description for context
+2. Run the skill listed in `skillTriggered`
+3. Update the card status when done: `$K move <id> <next-column>`
+
+## Environment Variables
+
+- `MISSION_CONTROL_PASSWORD` — Password for web UI auth (optional, no auth if unset)
+- `OPENCLAW_WEBHOOK_URL` — URL to fire webhooks when cards move to skill columns
+- `MC_PORT` — Override server port (default: random)
