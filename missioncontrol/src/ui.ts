@@ -1,4 +1,6 @@
-export function generateBoardHTML(): string {
+export function generateBoardHTML(basePath: string = ''): string {
+  // Strip trailing slash from basePath
+  const bp = basePath.replace(/\/+$/, '');
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -503,6 +505,7 @@ export function generateBoardHTML(): string {
   </div>
 
   <script>
+    const BASE_PATH = '${bp}';
     const COLUMNS = [
       { id: "backlog", name: "Backlog", skill: null },
       { id: "office-hours", name: "Office Hours", skill: "/office-hours" },
@@ -770,7 +773,7 @@ export function generateBoardHTML(): string {
       logSection.classList.remove('hidden');
       logContent.textContent = 'Loading...';
       try {
-        const res = await fetch(\`/api/cards/\${currentCardId}/log\`, { credentials: 'include' });
+        const res = await fetch(BASE_PATH + \`/api/cards/\${currentCardId}/log\`, { credentials: 'include' });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const text = await res.text();
         logContent.textContent = text || '(no log output)';
@@ -836,7 +839,7 @@ export function generateBoardHTML(): string {
       const errEl = document.getElementById('login-error');
       errEl.classList.add('hidden');
       try {
-        const res = await fetch('/auth/login', {
+        const res = await fetch(BASE_PATH + '/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -859,7 +862,7 @@ export function generateBoardHTML(): string {
     // ─── API ─────────────────────────────────────────────────────────────────
 
     async function apiFetch(url, options = {}) {
-      const res = await fetch(url, {
+      const res = await fetch(BASE_PATH + url, {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',

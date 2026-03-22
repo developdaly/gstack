@@ -24,6 +24,9 @@ import * as crypto from 'crypto';
 const config = resolveConfig();
 ensureStateDir(config);
 
+// ─── Base Path (for reverse proxy deployments) ──────────────────
+const MC_BASE_PATH = (process.env.MC_BASE_PATH || '').replace(/\/+$/, '');
+
 // ─── Auth ───────────────────────────────────────────────────────
 const MC_PASSWORD = process.env.MISSION_CONTROL_PASSWORD || '';
 const COOKIE_SECRET = crypto.randomBytes(32).toString('hex');
@@ -69,7 +72,7 @@ function isCliAuthenticated(req: Request): boolean {
 
 function setAuthCookie(): string {
   const token = signToken(Date.now().toString());
-  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  const secure = (process.env.NODE_ENV === 'production' || MC_BASE_PATH) ? '; Secure' : '';
   return `${COOKIE_NAME}=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${COOKIE_MAX_AGE}${secure}`;
 }
 
@@ -336,7 +339,7 @@ async function start() {
 
       // Board HTML — always served (JS handles login state)
       if (url.pathname === '/' && req.method === 'GET') {
-        return new Response(generateBoardHTML(), {
+        return new Response(generateBoardHTML(MC_BASE_PATH), {
           headers: { 'Content-Type': 'text/html' }
         });
       }
