@@ -379,7 +379,8 @@ export function generateBoardHTML(basePath: string = ''): string {
         <p class="text-xs text-gray-500 leading-tight">Kanban Board</p>
       </div>
     </div>
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-3">
+      <span id="header-info" class="text-xs text-gray-500 hidden"></span>
       <span id="poll-indicator" class="w-2 h-2 rounded-full bg-gray-600" title="Polling status"></span>
       <button class="btn btn-primary text-sm" style="padding:6px 14px;" onclick="openAddModal()">
         <svg class="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -501,6 +502,7 @@ export function generateBoardHTML(basePath: string = ''): string {
       </div>
       <div id="login-error" class="hidden text-red-400 text-sm mb-3"></div>
       <button class="btn btn-primary w-full" style="width:100%;justify-content:center;" onclick="submitLogin()">Sign In</button>
+      <div id="login-info" class="mt-6 pt-4 border-t border-gray-700 text-xs text-gray-500 space-y-1"></div>
     </div>
   </div>
 
@@ -826,6 +828,30 @@ export function generateBoardHTML(basePath: string = ''): string {
       document.getElementById('board').style.display = 'none';
       document.querySelector('header').style.display = 'none';
       setTimeout(() => document.getElementById('login-password').focus(), 50);
+      fetchLoginInfo();
+    }
+
+    async function fetchLoginInfo() {
+      try {
+        const res = await fetch(BASE_PATH + '/api/info');
+        if (!res.ok) return;
+        const info = await res.json();
+        const el = document.getElementById('login-info');
+        const uptime = formatUptime(info.uptime);
+        const lines = [
+          \`v\${info.version} · \${info.runtime}\`,
+          \`Up \${uptime} · \${info.cards} card\${info.cards !== 1 ? 's' : ''}\`,
+          info.webhookConfigured ? 'Webhook connected' : 'Webhook not configured',
+        ];
+        el.innerHTML = lines.map(l => \`<div>\${l}</div>\`).join('');
+      } catch {}
+    }
+
+    function formatUptime(seconds) {
+      if (seconds < 60) return seconds + 's';
+      if (seconds < 3600) return Math.floor(seconds / 60) + 'm';
+      if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ' + Math.floor((seconds % 3600) / 60) + 'm';
+      return Math.floor(seconds / 86400) + 'd ' + Math.floor((seconds % 86400) / 3600) + 'h';
     }
 
     function hideLogin() {
@@ -893,12 +919,29 @@ export function generateBoardHTML(basePath: string = ''): string {
           renderBoard(state);
         }
         setPollIndicator(true);
+        // Fetch header info once on first successful load
+        if (!headerInfoLoaded) {
+          headerInfoLoaded = true;
+          fetchHeaderInfo();
+        }
       } catch (err) {
         if (err.message !== 'Unauthorized') {
           console.error('Poll error:', err);
           setPollIndicator(false);
         }
       }
+    }
+
+    let headerInfoLoaded = false;
+    async function fetchHeaderInfo() {
+      try {
+        const res = await fetch(BASE_PATH + '/api/info', { credentials: 'include' });
+        if (!res.ok) return;
+        const info = await res.json();
+        const el = document.getElementById('header-info');
+        el.textContent = \`v\${info.version} · \${info.cards} card\${info.cards !== 1 ? 's' : ''}\`;
+        el.classList.remove('hidden');
+      } catch {}
     }
 
     async function moveCard(cardId, columnId) {

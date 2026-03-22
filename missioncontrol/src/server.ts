@@ -319,6 +319,20 @@ async function start() {
           });
         }
 
+        // Public server info — no auth, no secrets
+        if (url.pathname === '/api/info') {
+          const state = loadState(config);
+          const version = readVersionHash() || process.env.NORTHFLANK_GIT_COMMIT_SHA || 'dev';
+          return Response.json({
+            version: version.substring(0, 7),
+            uptime: Math.floor((Date.now() - startTime) / 1000),
+            runtime: `Bun ${Bun.version}`,
+            cards: state.cards.length,
+            webhookConfigured: !!process.env.OPENCLAW_WEBHOOK_URL,
+            authRequired: !!MC_PASSWORD,
+          });
+        }
+
         // Login — no auth required
         if (url.pathname === '/auth/login' && req.method === 'POST') {
           let body: any;
