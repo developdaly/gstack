@@ -308,51 +308,61 @@ async function start() {
     port,
     hostname: '0.0.0.0', // Allow non-localhost access (for Northflank)
     fetch: async (req) => {
-      const url = new URL(req.url);
+      try {
+        const url = new URL(req.url);
 
-      // Health check — no auth
-      if (url.pathname === '/health') {
-        return Response.json({
-          status: 'healthy',
-          uptime: Math.floor((Date.now() - startTime) / 1000),
-        });
-      }
-
-      // Login — no auth required
-      if (url.pathname === '/auth/login' && req.method === 'POST') {
-        const body = await req.json();
-        if (!MC_PASSWORD || body.password === MC_PASSWORD) {
-          return new Response(JSON.stringify({ ok: true }), {
-            headers: {
-              'Content-Type': 'application/json',
-              'Set-Cookie': setAuthCookie(),
-            }
+        // Health check — no auth
+        if (url.pathname === '/health') {
+          return Response.json({
+            status: 'healthy',
+            uptime: Math.floor((Date.now() - startTime) / 1000),
           });
         }
-        return Response.json({ error: 'Invalid password' }, { status: 401 });
-      }
 
-      // Auth check — no auth required
-      if (url.pathname === '/auth/check') {
-        return Response.json({ authenticated: isAuthenticated(req) });
-      }
-
-      // Board HTML — always served (JS handles login state)
-      if (url.pathname === '/' && req.method === 'GET') {
-        return new Response(generateBoardHTML(MC_BASE_PATH), {
-          headers: { 'Content-Type': 'text/html' }
-        });
-      }
-
-      // All /api/* routes require auth (cookie or bearer)
-      if (url.pathname.startsWith('/api/')) {
-        if (!isAuthenticated(req) && !isCliAuthenticated(req)) {
-          return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        // Login — no auth required
+        if (url.pathname === '/auth/login' && req.method === 'POST') {
+          let body: any;
+          try {
+            body = await req.json();
+          } catch {
+            return Response.json({ error: 'Invalid request body' }, { status: 400 });
+          }
+          if (!MC_PASSWORD || body.password === MC_PASSWORD) {
+            return new Response(JSON.stringify({ ok: true }), {
+              headers: {
+                'Content-Type': 'application/json',
+                'Set-Cookie': setAuthCookie(),
+              }
+            });
+          }
+          return Response.json({ error: 'Invalid password' }, { status: 401 });
         }
-        return handleApiRoute(url, req, config);
-      }
 
-      return new Response('Not found', { status: 404 });
+        // Auth check — no auth required
+        if (url.pathname === '/auth/check') {
+          return Response.json({ authenticated: isAuthenticated(req) });
+        }
+
+        // Board HTML — always served (JS handles login state)
+        if (url.pathname === '/' && req.method === 'GET') {
+          return new Response(generateBoardHTML(MC_BASE_PATH), {
+            headers: { 'Content-Type': 'text/html' }
+          });
+        }
+
+        // All /api/* routes require auth (cookie or bearer)
+        if (url.pathname.startsWith('/api/')) {
+          if (!isAuthenticated(req) && !isCliAuthenticated(req)) {
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+          }
+          return handleApiRoute(url, req, config);
+        }
+
+        return new Response('Not found', { status: 404 });
+      } catch (err: any) {
+        console.error(`[missioncontrol] Unhandled error: ${err.message}`);
+        return Response.json({ error: 'Internal server error' }, { status: 500 });
+      }
     }
   });
 
