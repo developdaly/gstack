@@ -113,6 +113,38 @@ export function generateBoardHTML(basePath: string = ''): string {
       border-color: #3B82F6;
     }
 
+    .card.awaiting-human {
+      border-color: rgba(249, 115, 22, 0.45);
+      box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.18);
+    }
+
+    .awaiting-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(249, 115, 22, 0.14);
+      border: 1px solid rgba(249, 115, 22, 0.35);
+      color: #FDBA74;
+      border-radius: 9999px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+
+    .question-preview {
+      margin-top: 8px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(249, 115, 22, 0.08);
+      border: 1px solid rgba(249, 115, 22, 0.18);
+      color: #FED7AA;
+      font-size: 12px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
     .status-dot {
       display: inline-block;
       width: 8px;
@@ -212,6 +244,78 @@ export function generateBoardHTML(basePath: string = ''): string {
       background: rgba(245, 158, 11, 0.14);
       color: #FCD34D;
       border-color: rgba(251, 191, 36, 0.38);
+    }
+
+    .card--needs-patrick {
+      border-color: rgba(249, 115, 22, 0.38);
+    }
+
+    .card--needs-patrick:hover {
+      border-color: rgba(249, 115, 22, 0.55);
+    }
+
+    .attention-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      border-radius: 9999px;
+    }
+
+    .attention-chip--comments {
+      min-width: 18px;
+      height: 18px;
+      padding: 0 6px;
+      background: rgba(139, 92, 246, 0.16);
+      border: 1px solid rgba(139, 92, 246, 0.32);
+      color: #C4B5FD;
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1;
+    }
+
+    .attention-chip--output {
+      width: 10px;
+      height: 10px;
+      background: #60A5FA;
+      box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.45);
+      animation: attention-pulse 1.8s ease-out infinite;
+    }
+
+    .attention-pill-row {
+      margin-top: 8px;
+    }
+
+    .attention-pill {
+      display: inline-flex;
+      align-items: center;
+      height: 20px;
+      padding: 0 8px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      border: 1px solid rgba(249, 115, 22, 0.35);
+      background: rgba(249, 115, 22, 0.14);
+      color: #FDBA74;
+    }
+
+    @keyframes attention-pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.45);
+      }
+      70% {
+        box-shadow: 0 0 0 6px rgba(96, 165, 250, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(96, 165, 250, 0);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .attention-chip--output {
+        animation: none;
+      }
     }
 
     .field-help {
@@ -426,48 +530,133 @@ export function generateBoardHTML(basePath: string = ''): string {
     }
 
     .activity-trail {
-      max-height: 280px;
+      max-height: 320px;
       overflow-y: auto;
       border: 1px solid #374151;
-      border-radius: 8px;
+      border-radius: 10px;
       background: #111827;
     }
 
     .activity-trail::-webkit-scrollbar { width: 4px; }
     .activity-trail::-webkit-scrollbar-thumb { background: #374151; border-radius: 2px; }
 
-    .activity-entry {
+    .activity-separator {
       padding: 8px 12px;
+      border-top: 1px solid #1F2937;
       border-bottom: 1px solid #1F2937;
-      font-size: 13px;
-      line-height: 1.5;
+      background: rgba(255,255,255,0.02);
+      color: #6B7280;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .activity-entry {
+      padding: 10px 12px;
+      border-bottom: 1px solid #1F2937;
       display: flex;
-      gap: 8px;
+      gap: 10px;
       align-items: flex-start;
     }
     .activity-entry:last-child { border-bottom: none; }
+    .activity-entry--agent { background: rgba(59, 130, 246, 0.06); }
+    .activity-entry--human { background: rgba(148, 163, 184, 0.07); }
 
     .activity-icon {
       flex-shrink: 0;
       width: 20px;
       height: 20px;
-      border-radius: 50%;
+      border-radius: 999px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 10px;
+      font-weight: 700;
+      margin-top: 2px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(148, 163, 184, 0.10);
+      color: #D1D5DB;
+    }
+    .activity-icon--system { background: rgba(52, 211, 153, 0.10); color: #34D399; }
+    .activity-icon--stage { background: rgba(59, 130, 246, 0.12); color: #60A5FA; }
+    .activity-icon--status { background: rgba(99, 102, 241, 0.12); color: #A5B4FC; }
+    .activity-icon--agent { background: rgba(96, 165, 250, 0.12); color: #93C5FD; }
+    .activity-icon--human { background: rgba(148, 163, 184, 0.14); color: #E5E7EB; }
+
+    .activity-main { flex: 1; min-width: 0; }
+    .activity-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 4px;
+    }
+    .activity-label {
+      color: #9CA3AF;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .activity-time {
+      color: #6B7280;
+      font-size: 11px;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+    .activity-body {
+      color: #D1D5DB;
+      font-size: 13px;
+      line-height: 1.55;
+      white-space: normal;
+      word-break: break-word;
+    }
+    .activity-body--system { color: #9CA3AF; }
+    .activity-body--comment {
+      color: #E5E7EB;
+      white-space: pre-wrap;
+    }
+    .activity-delta {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
       margin-top: 2px;
     }
-    .activity-icon.created { background: #1E3A5F; color: #60A5FA; }
-    .activity-icon.moved { background: #1E3A5F; color: #60A5FA; }
-    .activity-icon.skill_start { background: #164E3D; color: #34D399; }
-    .activity-icon.skill_complete { background: #14532D; color: #22C55E; }
-    .activity-icon.skill_failed { background: #450A0A; color: #F87171; }
-    .activity-icon.comment { background: #374151; color: #9CA3AF; }
+    .activity-chip {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.04);
+      color: #E5E7EB;
+      font-size: 12px;
+      line-height: 1;
+      padding: 6px 8px;
+    }
+    .activity-arrow {
+      color: #6B7280;
+      font-size: 12px;
+    }
 
-    .activity-text { color: #D1D5DB; flex: 1; }
-    .activity-time { color: #6B7280; font-size: 11px; flex-shrink: 0; white-space: nowrap; }
-    .activity-empty { color: #4B5563; text-align: center; padding: 16px; font-size: 13px; }
+    .question-block {
+      border-radius: 10px;
+      border: 1px solid rgba(249, 115, 22, 0.32);
+      background: rgba(249, 115, 22, 0.08);
+      padding: 12px;
+      color: #FED7AA;
+      white-space: pre-wrap;
+      line-height: 1.6;
+    }
+
+    .activity-empty {
+      color: #6B7280;
+      text-align: center;
+      padding: 18px 16px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100">
@@ -541,9 +730,19 @@ export function generateBoardHTML(basePath: string = ''): string {
         <input id="modal-tags" class="input-field" placeholder="comma-separated tags" />
       </div>
 
+      <div id="modal-attention-group" class="field-group">
+        <label class="label">Attention</label>
+        <select id="modal-attention-mode" class="input-field" onchange="syncAttentionInputs()">
+          <option value="none">Normal</option>
+          <option value="waiting_on_patrick">Waiting on Patrick</option>
+        </select>
+        <input id="modal-attention-reason" class="input-field mt-2" placeholder="Reason (optional)" />
+        <div id="modal-attention-help" class="field-help">Opening the modal marks unread output and unread comments as read. Patrick-specific attention stays active until you clear it.</div>
+      </div>
+
       <div class="field-group">
         <label class="label">Model</label>
-        <select id="modal-model-select" class="input-field"></select>
+        <select id="modal-model-select" class="input-field" onchange="clearModelSaveError()"></select>
         <div id="modal-model-helper" class="field-help"></div>
         <div id="modal-model-session-help" class="field-help hidden"></div>
         <div id="modal-model-warning" class="field-warning hidden"></div>
@@ -556,12 +755,11 @@ export function generateBoardHTML(basePath: string = ''): string {
         <div id="modal-skill-display" class="text-sm text-blue-400 font-mono bg-gray-900 rounded px-3 py-2 inline-block border border-gray-700"></div>
       </div>
 
-      <div class="field-group">
-        <label class="label">OpenClaw Session</label>
-        <div id="modal-session-display" class="text-sm text-gray-300 bg-gray-900 rounded px-3 py-2 border border-gray-700 whitespace-pre-wrap"></div>
-        <div class="flex gap-2 mt-2">
-          <button class="btn btn-secondary" style="padding:8px 12px;" onclick="copySessionResumeCommand()">Copy Resume Command</button>
-        </div>
+      <div id="modal-question-section" class="field-group hidden">
+        <label class="label" style="color:#FDBA74;">Agent Question</label>
+        <div id="modal-question-text" class="question-block"></div>
+        <textarea id="reply-input" class="input-field mt-3" placeholder="Reply to the agent and resume this card..." style="resize:vertical;min-height:88px;font-family:inherit;font-size:14px;border-color:rgba(249,115,22,0.38);"></textarea>
+        <button id="reply-submit-button" class="btn w-full mt-2" style="background:#F97316;color:white;width:100%;justify-content:center;" onclick="submitReply()">Reply &amp; Resume Agent</button>
       </div>
 
       <div class="flex gap-2 mb-4">
@@ -571,13 +769,21 @@ export function generateBoardHTML(basePath: string = ''): string {
 
       <!-- Activity Trail -->
       <div class="field-group">
-        <label class="label">Activity</label>
+        <label class="label">Timeline</label>
         <div id="modal-activity" class="activity-trail"></div>
-        <div class="flex gap-2 mt-2">
+        <div id="activity-comment-row" class="flex gap-2 mt-2">
           <input id="activity-comment-input" class="input-field flex-1" placeholder="Add a comment..." onkeydown="if(event.key==='Enter'&&!event.shiftKey)submitComment()" />
           <button class="btn btn-secondary" style="padding:8px 12px;" onclick="submitComment()">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
           </button>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="label">Thread Details</label>
+        <div id="modal-session-display" class="text-sm text-gray-300 bg-gray-900 rounded px-3 py-2 border border-gray-700 whitespace-pre-wrap"></div>
+        <div class="flex gap-2 mt-2">
+          <button class="btn btn-secondary" style="padding:8px 12px;" onclick="copySessionResumeCommand()">Copy Resume Command</button>
         </div>
       </div>
 
@@ -665,6 +871,7 @@ export function generateBoardHTML(basePath: string = ''): string {
       idle: '#6B7280',
       pending: '#F59E0B',
       running: '#3B82F6',
+      awaiting_human: '#F97316',
       complete: '#10B981',
       failed: '#EF4444',
     };
@@ -673,6 +880,7 @@ export function generateBoardHTML(basePath: string = ''): string {
       idle: 'Idle',
       pending: 'Pending',
       running: 'Running',
+      awaiting_human: 'Awaiting Human',
       complete: 'Complete',
       failed: 'Failed',
     };
@@ -680,6 +888,7 @@ export function generateBoardHTML(basePath: string = ''): string {
     let boardState = null;
     let lastStateJSON = null;
     let currentCardId = null;
+    let currentCardActivity = [];
     let dragCardId = null;
     let pollInterval = null;
     let isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 640;
@@ -687,6 +896,7 @@ export function generateBoardHTML(basePath: string = ''): string {
     let defaultModelRef = null;
     let modelCatalogPromise = null;
     let modelCatalogError = null;
+    let readMarkInFlightForCardId = null;
 
     // ─── Rendering ───────────────────────────────────────────────────────────
 
@@ -721,15 +931,27 @@ export function generateBoardHTML(basePath: string = ''): string {
       const currentOption = findModelOption(currentRef);
       const options = [
         '<option value="">Use default model</option>',
-        ...modelCatalog.map(option => 
-          `<option value="${escHtml(option.ref)}" ${option.ref === currentRef ? 'selected' : ''}>${escHtml(option.label)}</option>`
+        ...modelCatalog.map(option =>
+          '<option value="' + escHtml(option.ref) + '"' + (option.ref === currentRef ? ' selected' : '') + '>' + escHtml(option.label) + '</option>'
         ),
       ];
       if (currentRef && !currentOption) {
-        options.splice(1, 0, `<option value="${escHtml(currentRef)}" selected>Model unavailable</option>`);
+        options.splice(1, 0, '<option value="' + escHtml(currentRef) + '" selected>Model unavailable</option>');
       }
       select.innerHTML = options.join('');
       select.disabled = false;
+    }
+
+    function clearModelSaveError() {
+      const error = document.getElementById('modal-model-error');
+      error.textContent = '';
+      error.classList.add('hidden');
+    }
+
+    function showModelSaveError(message) {
+      const error = document.getElementById('modal-model-error');
+      error.textContent = message || 'Failed to save model changes.';
+      error.classList.remove('hidden');
     }
 
     function syncModelField(card) {
@@ -737,20 +959,17 @@ export function generateBoardHTML(basePath: string = ''): string {
       const helper = document.getElementById('modal-model-helper');
       const sessionHelp = document.getElementById('modal-model-session-help');
       const warning = document.getElementById('modal-model-warning');
-      const error = document.getElementById('modal-model-error');
       const ref = document.getElementById('modal-model-ref');
       const currentRef = card?.modelRef || '';
       const currentOption = findModelOption(currentRef);
       const isUnavailable = !!currentRef && !currentOption;
 
-      error.textContent = '';
-      error.classList.add('hidden');
-
       if (modelCatalog.length > 0) {
         populateModelSelect(card);
         select.disabled = false;
       } else {
-        select.innerHTML = `<option value="">${isUnavailable ? 'Model unavailable' : (currentRef || 'Use default model')}</option>`;
+        const selectLabel = isUnavailable ? 'Model unavailable' : (currentRef || 'Use default model');
+        select.innerHTML = '<option value="">' + escHtml(selectLabel) + '</option>';
         select.disabled = true;
       }
 
@@ -791,6 +1010,78 @@ export function generateBoardHTML(basePath: string = ''): string {
           ref.textContent = 'Canonical ref: ' + currentRef;
           ref.classList.remove('hidden');
         }
+      }
+    }
+
+    function syncAttentionInputs() {
+      const modeSelect = document.getElementById('modal-attention-mode');
+      const mode = modeSelect.value;
+      const reasonInput = document.getElementById('modal-attention-reason');
+      if (modeSelect.disabled) {
+        reasonInput.disabled = true;
+        return;
+      }
+      const enabled = mode === 'waiting_on_patrick';
+      reasonInput.disabled = !enabled;
+      if (!enabled) {
+        reasonInput.value = '';
+      }
+    }
+
+    function applyUpdatedCardToBoardState(updatedCard) {
+      if (!boardState || !updatedCard || !updatedCard.id) return;
+      const cards = Array.isArray(boardState.cards) ? [...boardState.cards] : [];
+      const idx = cards.findIndex(card => card.id === updatedCard.id);
+      if (idx === -1) return;
+      cards[idx] = updatedCard;
+      boardState = { ...boardState, cards };
+      lastStateJSON = JSON.stringify(boardState);
+      renderBoard(boardState);
+      syncOpenCardModal();
+    }
+
+    async function markCardRead(cardId, force = false) {
+      if (!cardId) return;
+      const card = findCard(cardId);
+      const derived = card && card.derived ? card.derived : null;
+      if (!force && (!derived || (!derived.hasUnreadOutput && !derived.unreadCommentCount))) {
+        return;
+      }
+      if (readMarkInFlightForCardId === cardId) return;
+      readMarkInFlightForCardId = cardId;
+      try {
+        const updatedCard = await apiFetch('/api/cards/' + cardId + '/read', { method: 'POST' });
+        applyUpdatedCardToBoardState(updatedCard);
+      } catch (err) {
+        console.error('Failed to mark card read:', err);
+      } finally {
+        if (readMarkInFlightForCardId === cardId) {
+          readMarkInFlightForCardId = null;
+        }
+      }
+    }
+
+    function maybeMarkOpenCardRead() {
+      const modal = document.getElementById('card-modal');
+      if (!currentCardId || modal.classList.contains('hidden')) return;
+      void markCardRead(currentCardId, false);
+    }
+
+    async function loadCardActivity(cardId) {
+      if (!cardId) return [];
+      try {
+        const activity = await apiFetch('/api/cards/' + cardId + '/activity');
+        if (currentCardId === cardId) {
+          currentCardActivity = Array.isArray(activity) ? activity : [];
+          renderActivityTrail(currentCardActivity);
+        }
+        return activity;
+      } catch (err) {
+        if (currentCardId === cardId) {
+          currentCardActivity = [];
+          renderActivityTrail([]);
+        }
+        throw err;
       }
     }
 
@@ -853,37 +1144,90 @@ export function generateBoardHTML(basePath: string = ''): string {
       return cards.map(card => renderCard(card)).join('');
     }
 
+    function capUnreadCount(count) {
+      return count > 9 ? '9+' : String(count);
+    }
+
+    function renderAttentionChip(card) {
+      const derived = card.derived || {};
+      const unreadCommentCount = Number(derived.unreadCommentCount || 0);
+      const hasUnreadOutput = !!derived.hasUnreadOutput;
+      const needsPatrick = card.attentionMode === 'waiting_on_patrick' || derived.attentionLevel === 'patrick';
+
+      if (needsPatrick) {
+        if (unreadCommentCount > 0) {
+          const label = unreadCommentCount === 1 ? '1 unread comment' : capUnreadCount(unreadCommentCount) + ' unread comments';
+          return '<span class="attention-chip attention-chip--comments" aria-label="' + escHtml(label) + '" title="' + escHtml(label) + '">' + escHtml(capUnreadCount(unreadCommentCount)) + '</span>';
+        }
+        return '';
+      }
+
+      if (unreadCommentCount > 0) {
+        const label = unreadCommentCount === 1 ? '1 unread comment' : capUnreadCount(unreadCommentCount) + ' unread comments';
+        return '<span class="attention-chip attention-chip--comments" aria-label="' + escHtml(label) + '" title="' + escHtml(label) + '">' + escHtml(capUnreadCount(unreadCommentCount)) + '</span>';
+      }
+
+      if (hasUnreadOutput) {
+        return '<span class="attention-chip attention-chip--output" aria-label="New unread output" title="New unread output"></span>';
+      }
+
+      return '';
+    }
+
+    function renderAttentionPill(card) {
+      const derived = card.derived || {};
+      const needsPatrick = card.attentionMode === 'waiting_on_patrick' || derived.attentionLevel === 'patrick';
+      if (!needsPatrick) return '';
+      const title = card.attentionReason ? ' title="' + escHtml(card.attentionReason) + '"' : '';
+      const label = card.status === 'awaiting_human' ? 'Awaiting Human' : 'Needs Patrick';
+      return '<div class="attention-pill-row"><span class="attention-pill" aria-label="' + escHtml(label) + '"' + title + '>' + escHtml(label) + '</span></div>';
+    }
+
     function renderCard(card) {
       const status = card.status || 'idle';
       const color = STATUS_COLORS[status] || STATUS_COLORS.idle;
       const tags = (card.tags || []);
       const tagsHtml = tags.length > 0
-        ? `<div class="flex flex-wrap mt-2">${tags.map(t => `<span class="tag-badge">${escHtml(t)}</span>`).join('')}</div>`
+        ? '<div class="flex flex-wrap mt-2">' + tags.map(t => '<span class="tag-badge">' + escHtml(t) + '</span>').join('') + '</div>'
         : '';
       const modelBadgeHtml = card.modelBadgeLabel
-        ? `<div class="mt-2"><span class="model-badge${card.modelState === 'unavailable' ? ' unavailable' : ''}">${escHtml(card.modelBadgeLabel)}</span></div>`
+        ? '<div class="mt-2"><span class="model-badge' + (card.modelState === 'unavailable' ? ' unavailable' : '') + '">' + escHtml(card.modelBadgeLabel) + '</span></div>'
         : '';
       const runningClass = status === 'running' ? ' running' : '';
       const sessionHtml = card.sessionId
-        ? `<div class="text-xs text-gray-500 mt-2">OpenClaw · ${escHtml(String(card.sessionId).slice(0, 8))}</div>`
+        ? '<div class="text-xs text-gray-500 mt-2">OpenClaw · ' + escHtml(String(card.sessionId).slice(0, 8)) + '</div>'
         : '';
+      const skillHtml = card.skillTriggered
+        ? '<div class="text-xs text-blue-400 font-mono mt-2 truncate">' + escHtml(card.skillTriggered) + '</div>'
+        : '';
+      const titleChipHtml = renderAttentionChip(card);
+      const attentionPillHtml = renderAttentionPill(card);
+      const questionPreviewHtml = status === 'awaiting_human' && card.attentionReason
+        ? '<div class="question-preview">⁉️ ' + escHtml(card.attentionReason.length > 120 ? card.attentionReason.slice(0, 120) + '…' : card.attentionReason) + '</div>'
+        : '';
+      const cardClasses = 'card'
+        + ((card.attentionMode === 'waiting_on_patrick' || (card.derived && card.derived.attentionLevel === 'patrick')) ? ' card--needs-patrick' : '')
+        + (status === 'awaiting_human' ? ' awaiting-human' : '');
 
-      return `
-        <div class="card"
-          data-card-id="${escHtml(card.id)}"
-          ${!isMobile ? 'draggable="true"' : ''}
-          onclick="openCardModal('${escHtml(card.id)}')"
+      return \`
+        <div class="\${cardClasses}"
+          data-card-id="\${escHtml(card.id)}"
+          \${!isMobile ? 'draggable="true"' : ''}
+          onclick="openCardModal('\${escHtml(card.id)}')"
         >
           <div class="flex items-start gap-2">
-            <span class="status-dot${runningClass}" style="background:${color};margin-top:5px;flex-shrink:0;"></span>
-            <span class="text-sm font-medium text-gray-100 leading-snug flex-1">${escHtml(card.title || 'Untitled')}</span>
+            <span class="status-dot\${runningClass}" style="background:\${color};margin-top:5px;flex-shrink:0;"></span>
+            <span class="text-sm font-medium text-gray-100 leading-snug flex-1">\${escHtml(card.title || 'Untitled')}</span>
+            \${titleChipHtml}
           </div>
-          ${tagsHtml}
-          ${modelBadgeHtml}
-          ${card.skillTriggered ? `<div class="text-xs text-blue-400 font-mono mt-2 truncate">${escHtml(card.skillTriggered)}</div>` : ''}
-          ${sessionHtml}
+          \${attentionPillHtml}
+          \${questionPreviewHtml}
+          \${tagsHtml}
+          \${modelBadgeHtml}
+          \${skillHtml}
+          \${sessionHtml}
         </div>
-      `;
+      \`;
     }
 
     // ─── Drag and Drop ───────────────────────────────────────────────────────
@@ -955,6 +1299,19 @@ export function generateBoardHTML(basePath: string = ''): string {
         \`<option value="\${c.id}" \${c.id === (card.column || 'backlog') ? 'selected' : ''}>\${escHtml(c.name)}</option>\`
       ).join('');
 
+      const attentionModeSelect = document.getElementById('modal-attention-mode');
+      const attentionReasonInput = document.getElementById('modal-attention-reason');
+      const attentionHelp = document.getElementById('modal-attention-help');
+      const attentionLocked = card.status === 'awaiting_human';
+      attentionModeSelect.value = card.attentionMode || 'none';
+      attentionReasonInput.value = card.attentionReason || '';
+      attentionModeSelect.disabled = attentionLocked;
+      attentionReasonInput.disabled = attentionLocked;
+      attentionHelp.textContent = attentionLocked
+        ? 'This card is waiting on an active agent question. Reply below to resume the same durable thread.'
+        : 'Opening the modal marks unread output and unread comments as read. Patrick-specific attention stays active until you clear it.';
+      syncAttentionInputs();
+
       // Skill
       const skillSection = document.getElementById('modal-skill-section');
       const skillDisplay = document.getElementById('modal-skill-display');
@@ -982,8 +1339,28 @@ export function generateBoardHTML(basePath: string = ''): string {
         sessionDisplay.textContent = 'No OpenClaw session yet. The first move into a skill-backed stage creates and binds a durable work thread for this card.';
       }
 
+      const questionSection = document.getElementById('modal-question-section');
+      const questionText = document.getElementById('modal-question-text');
+      const replyInput = document.getElementById('reply-input');
+      const replyButton = document.getElementById('reply-submit-button');
+      const commentRow = document.getElementById('activity-comment-row');
+      if (card.status === 'awaiting_human' && card.attentionReason) {
+        questionText.textContent = card.attentionReason;
+        questionSection.classList.remove('hidden');
+        commentRow.classList.add('hidden');
+        replyInput.disabled = false;
+        replyButton.disabled = false;
+      } else {
+        questionText.textContent = '';
+        questionSection.classList.add('hidden');
+        commentRow.classList.remove('hidden');
+        replyInput.value = '';
+        replyInput.disabled = true;
+        replyButton.disabled = true;
+      }
+
       // Activity trail
-      renderActivityTrail(card.activity || []);
+      renderActivityTrail(currentCardId === card.id ? currentCardActivity : []);
     }
 
     function syncOpenCardModal() {
@@ -992,25 +1369,32 @@ export function generateBoardHTML(basePath: string = ''): string {
       const card = findCard(currentCardId);
       if (!card) return;
       refreshModalReadOnlyFields(card);
+      maybeMarkOpenCardRead();
+      void loadCardActivity(currentCardId);
     }
 
     function openCardModal(cardId) {
       const card = findCard(cardId);
       if (!card) return;
       currentCardId = cardId;
+      currentCardActivity = [];
 
       document.getElementById('modal-title').value = card.title || '';
       document.getElementById('modal-description').value = card.description || '';
       document.getElementById('modal-tags').value = (card.tags || []).join(', ');
       modelCatalogError = null;
+      clearModelSaveError();
       refreshModalReadOnlyFields(card);
       document.getElementById('activity-comment-input').value = '';
+      document.getElementById('reply-input').value = '';
 
       // Reset log
       document.getElementById('log-section').classList.add('hidden');
       document.getElementById('log-content').textContent = '';
 
       document.getElementById('card-modal').classList.remove('hidden');
+      void loadCardActivity(cardId);
+      void markCardRead(cardId, true);
       ensureModelCatalogLoaded()
         .then(() => {
           const liveCard = findCard(cardId) || card;
@@ -1025,6 +1409,7 @@ export function generateBoardHTML(basePath: string = ''): string {
     function closeCardModal() {
       document.getElementById('card-modal').classList.add('hidden');
       currentCardId = null;
+      currentCardActivity = [];
     }
 
     async function saveCardEdits() {
@@ -1033,16 +1418,29 @@ export function generateBoardHTML(basePath: string = ''): string {
       const description = document.getElementById('modal-description').value.trim();
       const tagsRaw = document.getElementById('modal-tags').value;
       const tags = tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
+      const modelRef = document.getElementById('modal-model-select').value || null;
+      const liveCard = findCard(currentCardId);
+      const isAwaitingHuman = !!liveCard && liveCard.status === 'awaiting_human';
+      const attentionMode = document.getElementById('modal-attention-mode').value;
+      const attentionReasonInput = document.getElementById('modal-attention-reason');
+      const attentionReason = attentionMode === 'waiting_on_patrick' ? attentionReasonInput.value.trim() : null;
+      const payload = { title, description, tags, modelRef };
+      if (!isAwaitingHuman) {
+        payload.attentionMode = attentionMode;
+        payload.attentionReason = attentionReason;
+      }
+
+      clearModelSaveError();
 
       try {
-        await apiFetch(\`/api/cards/\${currentCardId}\`, {
+        await apiFetch('/api/cards/' + currentCardId, {
           method: 'PATCH',
-          body: JSON.stringify({ title, description, tags }),
+          body: JSON.stringify(payload),
         });
         await refreshState();
         closeCardModal();
       } catch (err) {
-        alert('Failed to save: ' + err.message);
+        showModelSaveError(err.message || 'Failed to save changes.');
       }
     }
 
@@ -1097,14 +1495,28 @@ export function generateBoardHTML(basePath: string = ''): string {
 
     // ─── Activity Trail ──────────────────────────────────────────────────────
 
-    const ACTIVITY_ICONS = {
-      created: '✦',
-      moved: '→',
-      skill_start: '▶',
-      skill_complete: '✓',
-      skill_failed: '✗',
-      comment: '💬',
+    const ACTIVITY_META = {
+      card_created: { icon: '✦', family: 'system', label: 'System' },
+      session_linked: { icon: '⇄', family: 'system', label: 'System' },
+      run_started: { icon: '▶', family: 'system', label: 'Run' },
+      run_completed: { icon: '✓', family: 'system', label: 'Run' },
+      run_failed: { icon: '✕', family: 'system', label: 'Run' },
+      run_cancelled: { icon: '■', family: 'system', label: 'Run' },
+      stage_changed: { icon: '→', family: 'stage', label: 'Stage' },
+      status_changed: { icon: '●', family: 'status', label: 'Status' },
+      agent_comment: { icon: '💬', family: 'agent', label: 'Agent' },
+      human_comment: { icon: '💬', family: 'human', label: 'Human' },
+      agent_question: { icon: '⁉', family: 'agent', label: 'Agent' },
+      human_reply: { icon: '↩', family: 'human', label: 'Human' },
+      unknown_event: { icon: '•', family: 'system', label: 'System' },
     };
+
+    function activityMetaFor(entry) {
+      const key = String(entry && entry.type ? entry.type : '');
+      return Object.prototype.hasOwnProperty.call(ACTIVITY_META, key)
+        ? ACTIVITY_META[key]
+        : ACTIVITY_META.unknown_event;
+    }
 
     function formatActivityTime(iso) {
       try {
@@ -1115,7 +1527,6 @@ export function generateBoardHTML(basePath: string = ''): string {
         const month = d.toLocaleString('en-US', { month: 'short' });
         const day = d.getDate();
         const year = d.getFullYear();
-        // Show date if not today
         if (d.toDateString() !== now.toDateString()) {
           return month + ' ' + day + (year !== now.getFullYear() ? ', ' + year : '') + ' ' + time;
         }
@@ -1123,23 +1534,114 @@ export function generateBoardHTML(basePath: string = ''): string {
       } catch { return ''; }
     }
 
+    function formatActivityDayLabel(iso) {
+      try {
+        const d = new Date(iso);
+        const now = new Date();
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+        if (d.toDateString() === now.toDateString()) return 'Today';
+        if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+        const parts = [
+          d.toLocaleString('en-US', { weekday: 'short' }),
+          d.toLocaleString('en-US', { month: 'short' }) + ' ' + d.getDate(),
+        ];
+        if (d.getFullYear() !== now.getFullYear()) parts.push(String(d.getFullYear()));
+        return parts.join(', ');
+      } catch {
+        return '';
+      }
+    }
+
+    function columnLabel(value) {
+      if (!value) return 'Unknown stage';
+      const match = COLUMNS.find(column => column.id === value);
+      return match ? match.name : String(value);
+    }
+
+    function statusLabel(value) {
+      if (!value) return 'Unknown status';
+      return STATUS_LABELS[value] || String(value).replace(/_/g, ' ').replace(/\\b\\w/g, char => char.toUpperCase());
+    }
+
+    function renderActivityText(text) {
+      return escHtml(String(text || '')).replace(/\\n/g, '<br>');
+    }
+
+    function renderActivityDelta(fromLabel, toLabel) {
+      return '<div class="activity-delta">'
+        + '<span class="activity-chip">' + escHtml(fromLabel) + '</span>'
+        + '<span class="activity-arrow">→</span>'
+        + '<span class="activity-chip">' + escHtml(toLabel) + '</span>'
+        + '</div>';
+    }
+
+    function renderSystemActivityBody(entry) {
+      const type = String(entry && entry.type ? entry.type : 'unknown_event');
+      const stage = columnLabel(entry.column || entry.toColumn);
+      const sessionSuffix = entry.sessionId ? ' · ' + escHtml(String(entry.sessionId).slice(0, 8)) : '';
+      if (type === 'card_created') return '<div class="activity-body activity-body--system">Card created</div>';
+      if (type === 'session_linked') return '<div class="activity-body activity-body--system">Durable thread linked' + sessionSuffix + '</div>';
+      if (type === 'run_started') {
+        const verb = /resum/i.test(String(entry.text || '')) ? 'Resumed' : 'Started';
+        return '<div class="activity-body activity-body--system">' + escHtml(verb + ' ' + stage) + sessionSuffix + '</div>';
+      }
+      if (type === 'run_completed') return '<div class="activity-body activity-body--system">' + escHtml(stage + ' completed') + '</div>';
+      if (type === 'run_failed') {
+        const exitSuffix = typeof entry.exitCode === 'number' ? ' (exit ' + String(entry.exitCode) + ')' : '';
+        return '<div class="activity-body activity-body--system">' + escHtml(stage + ' failed' + exitSuffix) + '</div>';
+      }
+      if (type === 'run_cancelled') {
+        const reason = entry.reason ? ' — ' + String(entry.reason) : '';
+        return '<div class="activity-body activity-body--system">' + escHtml('Run cancelled' + reason) + '</div>';
+      }
+      return '<div class="activity-body activity-body--system">' + renderActivityText(entry.text || 'System event') + '</div>';
+    }
+
+    function renderActivityBody(entry) {
+      const type = String(entry && entry.type ? entry.type : 'unknown_event');
+      if (type === 'stage_changed' && entry.fromColumn && entry.toColumn) {
+        return renderActivityDelta(columnLabel(entry.fromColumn), columnLabel(entry.toColumn));
+      }
+      if (type === 'status_changed' && entry.fromStatus && entry.toStatus) {
+        return renderActivityDelta(statusLabel(entry.fromStatus), statusLabel(entry.toStatus));
+      }
+      if (type === 'agent_comment' || type === 'human_comment' || type === 'agent_question' || type === 'human_reply') {
+        return '<div class="activity-body activity-body--comment">' + renderActivityText(entry.text) + '</div>';
+      }
+      return renderSystemActivityBody(entry);
+    }
+
     function renderActivityTrail(activity) {
       const container = document.getElementById('modal-activity');
       if (!activity || activity.length === 0) {
-        container.innerHTML = '<div class="activity-empty">No activity yet</div>';
+        container.innerHTML = '<div class="activity-empty">No timeline yet.<br>This card has not recorded workflow activity or comments.</div>';
         return;
       }
-      // Show newest first
       const sorted = [...activity].reverse();
-      container.innerHTML = sorted.map(entry => {
-        const icon = ACTIVITY_ICONS[entry.type] || '•';
-        const iconClass = entry.type || 'comment';
-        return \`<div class="activity-entry">
-          <div class="activity-icon \${iconClass}">\${icon}</div>
-          <div class="activity-text">\${escHtml(entry.text)}</div>
-          <div class="activity-time">\${formatActivityTime(entry.timestamp)}</div>
-        </div>\`;
-      }).join('');
+      let lastDayLabel = null;
+      const parts = [];
+      sorted.forEach(entry => {
+        const dayLabel = formatActivityDayLabel(entry.timestamp);
+        if (dayLabel && dayLabel !== lastDayLabel) {
+          parts.push('<div class="activity-separator">' + escHtml(dayLabel) + '</div>');
+          lastDayLabel = dayLabel;
+        }
+        const meta = activityMetaFor(entry);
+        parts.push(
+          '<div class="activity-entry activity-entry--' + meta.family + '">'
+            + '<div class="activity-icon activity-icon--' + meta.family + '">' + meta.icon + '</div>'
+            + '<div class="activity-main">'
+              + '<div class="activity-head">'
+                + '<span class="activity-label">' + escHtml(meta.label) + '</span>'
+                + '<span class="activity-time">' + formatActivityTime(entry.timestamp) + '</span>'
+              + '</div>'
+              + renderActivityBody(entry)
+            + '</div>'
+          + '</div>'
+        );
+      });
+      container.innerHTML = parts.join('');
     }
 
     async function submitComment() {
@@ -1149,13 +1651,47 @@ export function generateBoardHTML(basePath: string = ''): string {
       if (!text) return;
       input.value = '';
       try {
-        const activity = await apiFetch(\`/api/cards/\${currentCardId}/activity\`, {
+        const activity = await apiFetch('/api/cards/' + currentCardId + '/activity', {
           method: 'POST',
-          body: JSON.stringify({ type: 'comment', text }),
+          body: JSON.stringify({ text }),
         });
-        renderActivityTrail(activity);
+        currentCardActivity = Array.isArray(activity) ? activity : [];
+        renderActivityTrail(currentCardActivity);
+        void markCardRead(currentCardId, true);
       } catch (err) {
         alert('Failed to add comment: ' + err.message);
+      }
+    }
+
+    async function submitReply() {
+      if (!currentCardId) return;
+      const input = document.getElementById('reply-input');
+      const button = document.getElementById('reply-submit-button');
+      const text = input.value.trim();
+      if (!text) {
+        input.focus();
+        return;
+      }
+
+      input.disabled = true;
+      button.disabled = true;
+      const originalLabel = button.textContent;
+      button.textContent = 'Sending…';
+      try {
+        await apiFetch('/api/cards/' + currentCardId + '/reply', {
+          method: 'POST',
+          body: JSON.stringify({ text }),
+        });
+        input.value = '';
+        await refreshState();
+      } catch (err) {
+        alert('Failed to send reply: ' + err.message);
+      } finally {
+        const liveCard = findCard(currentCardId);
+        const stillAwaiting = liveCard && liveCard.status === 'awaiting_human';
+        input.disabled = !stillAwaiting;
+        button.disabled = !stillAwaiting;
+        button.textContent = originalLabel;
       }
     }
 

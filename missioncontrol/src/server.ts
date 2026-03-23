@@ -22,7 +22,11 @@ import {
   deleteCard,
   getCard,
   addActivity,
+  setCardStatus,
+  isCardStatus,
   COLUMNS,
+  type ActivityActor,
+  type AttentionMode,
   type Card,
 } from './state';
 import { generateBoardHTML } from './ui';
@@ -54,6 +58,7 @@ type ActiveRun = {
 };
 
 const ACTIVE_RUNS = new Map<string, ActiveRun>();
+let SERVER_PORT = 0;
 
 type ModelOption = {
   ref: string;
@@ -68,6 +73,19 @@ type CardModelView = {
   modelState: 'default' | 'selected' | 'unavailable';
   modelLabel: string | null;
   modelBadgeLabel: string | null;
+};
+
+type AttentionLevel = 'none' | 'output' | 'comment' | 'patrick';
+
+type CardAttentionDerived = {
+  logUpdatedAt: string | null;
+  hasUnreadOutput: boolean;
+  unreadCommentCount: number;
+  attentionLevel: AttentionLevel;
+};
+
+type CardView = Card & CardModelView & {
+  derived: CardAttentionDerived;
 };
 
 let modelOptionsCache:
@@ -190,6 +208,47 @@ function decorateCardWithModelView(card: Card, modelIndex?: Map<string, ModelOpt
   };
 }
 
+function getLogUpdatedAt(card: Card): string | null {
+  if (!card.logFile) return null;
+  try {
+    return fs.statSync(card.logFile).mtime.toISOString();
+  } catch {
+    return null;
+  }
+}
+
+function getUnreadCommentCount(card: Card): number {
+  return (card.activity || []).filter((entry) => {
+    if (entry.actor === 'system') return false;
+    if (!card.lastViewedAt) return true;
+    return entry.timestamp > card.lastViewedAt;
+  }).length;
+}
+
+function decorateCard(card: Card, modelIndex?: Map<string, ModelOption>): CardView {
+  const logUpdatedAt = getLogUpdatedAt(card);
+  const hasUnreadOutput = !!logUpdatedAt && (!card.lastViewedAt || logUpdatedAt > card.lastViewedAt);
+  const unreadCommentCount = getUnreadCommentCount(card);
+  const attentionLevel: AttentionLevel =
+    card.attentionMode === 'waiting_on_patrick'
+      ? 'patrick'
+      : unreadCommentCount > 0
+        ? 'comment'
+        : hasUnreadOutput
+          ? 'output'
+          : 'none';
+
+  return {
+    ...decorateCardWithModelView(card, modelIndex),
+    derived: {
+      logUpdatedAt,
+      hasUnreadOutput,
+      unreadCommentCount,
+      attentionLevel,
+    },
+  };
+}
+
 async function applyCardModelToSession(card: Card): Promise<void> {
   if (!card.sessionKey || !card.sessionId) return;
 
@@ -263,6 +322,18 @@ function buildCardSessionKey(card: Card): string {
   return `agent:${OPENCLAW_AGENT_ID}:missioncontrol:card:${card.id.toLowerCase()}`;
 }
 
+function buildCardApiUrl(cardId: string): string {
+  return `http://127.0.0.1:${SERVER_PORT}/api/cards/${cardId}`;
+}
+
+function buildCardAgentEnv(cardId: string): Record<string, string | undefined> {
+  return {
+    ...process.env,
+    MC_CARD_API_URL: buildCardApiUrl(cardId),
+    MC_AUTH_TOKEN: AUTH_TOKEN,
+  };
+}
+
 function appendLog(logFile: string, text: string): void {
   fs.mkdirSync(path.dirname(logFile), { recursive: true });
   fs.appendFileSync(logFile, text, { encoding: 'utf-8', mode: 0o600 });
@@ -317,6 +388,9 @@ function buildStagePrompt(params: {
   }
 
   lines.push(
+    `If you need human input to proceed, ask exactly one clear question by POSTing to the Mission Control callback URL in this environment:`,
+    `curl -sS -X POST "$MC_CARD_API_URL/question" \\\n  -H "Authorization: Bearer $MC_AUTH_TOKEN" \\\n  -H "Content-Type: application/json" \\\n  --data '{"text":"<your question here>"}'`,
+    `After posting the question, stop and wait. Do not guess, do not continue with placeholder assumptions, and do not ask the human anywhere else. When the human replies in the card UI, their response will be sent back into this same session so you can continue.`,
     `Task: advance this card in the ${columnName} stage and leave the thread in a resumable state for the next stage move.`,
   );
 
@@ -356,8 +430,9 @@ async function ensureCardSession(config: MCConfig, card: Card): Promise<Card> {
     addActivity(
       config,
       card.id,
-      'comment',
+      'session_linked',
       `Linked durable OpenClaw session ${shortId(sessionId)} (${sessionKey})`,
+      { actor: 'system', sessionId, sessionKey },
     );
   }
 
@@ -375,6 +450,78 @@ function cancelActiveRun(cardId: string, reason?: string): void {
   if (card?.logFile) {
     appendLog(card.logFile, `\n[missioncontrol] Cancelled active run${reason ? `: ${reason}` : ''}\n`);
   }
+  if (card) {
+    addActivity(config, cardId, 'run_cancelled', reason ? `Run cancelled: ${reason}` : 'Run cancelled', {
+      column: card.column,
+      skill: card.skillTriggered || undefined,
+      reason,
+    });
+  }
+}
+
+function attachRunExitHandler(params: {
+  cardId: string;
+  runId: string;
+  proc: Bun.Subprocess;
+  logFile: string;
+  columnName: string;
+  sessionId: string | null;
+  column: string;
+  skill: string | null;
+}): void {
+  const { cardId, runId, proc, logFile, columnName, sessionId, column, skill } = params;
+
+  void proc.exited
+    .then((exitCode) => {
+      const active = ACTIVE_RUNS.get(cardId);
+      if (!active || active.runId !== runId) {
+        return;
+      }
+      ACTIVE_RUNS.delete(cardId);
+
+      const currentCard = getCard(config, cardId);
+      if (currentCard?.status === 'awaiting_human') {
+        appendLog(
+          logFile,
+          `\n[missioncontrol] Process exited with code ${exitCode}; card is awaiting human input so status was preserved\n`,
+        );
+        return;
+      }
+
+      const status = exitCode === 0 ? 'complete' : 'failed';
+      const activityType = exitCode === 0 ? 'run_completed' : 'run_failed';
+      const activityText =
+        exitCode === 0
+          ? `${columnName} completed in durable session ${shortId(sessionId)}`
+          : `${columnName} failed in durable session ${shortId(sessionId)} (exit ${exitCode})`;
+
+      appendLog(logFile, `\n[missioncontrol] Process exited with code ${exitCode}\n`);
+      setCardStatus(config, cardId, status, {
+        column,
+        skill: skill || undefined,
+      });
+      addActivity(config, cardId, activityType, activityText, {
+        column,
+        skill: skill || undefined,
+        ...(typeof exitCode === 'number' ? { exitCode } : {}),
+      });
+    })
+    .catch((err: any) => {
+      const active = ACTIVE_RUNS.get(cardId);
+      if (!active || active.runId !== runId) {
+        return;
+      }
+      ACTIVE_RUNS.delete(cardId);
+      appendLog(logFile, `\n[missioncontrol] Execution error: ${err.message}\n`);
+      setCardStatus(config, cardId, 'failed', {
+        column,
+        skill: skill || undefined,
+      });
+      addActivity(config, cardId, 'run_failed', `${columnName} failed: ${err.message}`, {
+        column,
+        skill: skill || undefined,
+      });
+    });
 }
 
 async function startCardSessionRun(params: {
@@ -393,16 +540,19 @@ async function startCardSessionRun(params: {
   cancelActiveRun(card.id, `stage moved to ${columnName}`);
 
   card = updateCard(config, card.id, {
-    status: 'running',
     skillTriggered: skill,
     logFile,
+  });
+  card = setCardStatus(config, card.id, 'running', {
+    column: card.column,
+    skill,
   });
   addActivity(
     config,
     card.id,
-    'skill_start',
+    'run_started',
     `${firstTurn ? 'Started' : 'Resumed'} ${columnName} in durable OpenClaw session ${shortId(card.sessionId)}`,
-    { column: card.column, skill },
+    { column: card.column, skill, sessionId: card.sessionId || undefined },
   );
 
   appendLog(
@@ -427,7 +577,7 @@ async function startCardSessionRun(params: {
     ['openclaw', 'agent', '--session-id', String(card.sessionId), '--message', prompt, '--timeout', AGENT_TIMEOUT_SECONDS],
     {
       cwd: config.projectDir,
-      env: process.env,
+      env: buildCardAgentEnv(card.id),
       stdout: 'pipe',
       stderr: 'pipe',
     },
@@ -438,42 +588,16 @@ async function startCardSessionRun(params: {
 
   void pipeStreamToLog(proc.stdout, logFile);
   void pipeStreamToLog(proc.stderr, logFile, '[stderr] ');
-
-  void proc.exited
-    .then((exitCode) => {
-      const active = ACTIVE_RUNS.get(card.id);
-      if (!active || active.runId !== runId) {
-        return;
-      }
-      ACTIVE_RUNS.delete(card.id);
-
-      const status = exitCode === 0 ? 'complete' : 'failed';
-      const activityType = exitCode === 0 ? 'skill_complete' : 'skill_failed';
-      const activityText =
-        exitCode === 0
-          ? `${columnName} completed in durable session ${shortId(card.sessionId)}`
-          : `${columnName} failed in durable session ${shortId(card.sessionId)} (exit ${exitCode})`;
-
-      appendLog(logFile, `\n[missioncontrol] Process exited with code ${exitCode}\n`);
-      updateCard(config, card.id, { status });
-      addActivity(config, card.id, activityType, activityText, {
-        column: card.column,
-        skill,
-      });
-    })
-    .catch((err: any) => {
-      const active = ACTIVE_RUNS.get(card.id);
-      if (!active || active.runId !== runId) {
-        return;
-      }
-      ACTIVE_RUNS.delete(card.id);
-      appendLog(logFile, `\n[missioncontrol] Execution error: ${err.message}\n`);
-      updateCard(config, card.id, { status: 'failed' });
-      addActivity(config, card.id, 'skill_failed', `${columnName} failed: ${err.message}`, {
-        column: card.column,
-        skill,
-      });
-    });
+  attachRunExitHandler({
+    cardId: card.id,
+    runId,
+    proc,
+    logFile,
+    columnName,
+    sessionId: card.sessionId,
+    column: card.column,
+    skill,
+  });
 }
 
 // ─── Auth ───────────────────────────────────────────────────────
@@ -591,7 +715,10 @@ async function handleApiRoute(url: URL, req: Request, config: MCConfig): Promise
     } catch {}
     return Response.json({
       columns: COLUMNS,
-      cards: state.cards.map((card) => decorateCardWithModelView(card, modelIndex)),
+      cards: state.cards.map((card) => {
+        const decorated = decorateCard(card, modelIndex);
+        return { ...decorated, activity: [] };
+      }),
     });
   }
 
@@ -621,6 +748,7 @@ async function handleApiRoute(url: URL, req: Request, config: MCConfig): Promise
     const cardId = moveMatch[1];
     const body = await req.json();
     try {
+      cancelActiveRun(cardId, `card moved to ${getColumnName(body.column)}`);
       const result = moveCard(config, cardId, body.column);
       if (result.skill) {
         startCardSessionRun({
@@ -629,14 +757,15 @@ async function handleApiRoute(url: URL, req: Request, config: MCConfig): Promise
           skill: result.skill,
         }).catch((err: any) => {
           console.error(`[missioncontrol] Card session run failed: ${err.message}`);
-          updateCard(config, cardId, { status: 'failed' });
-          addActivity(config, cardId, 'skill_failed', `Failed to start durable session: ${err.message}`, {
+          setCardStatus(config, cardId, 'failed', {
+            column: body.column,
+            skill: result.skill || undefined,
+          });
+          addActivity(config, cardId, 'run_failed', `Failed to start durable session: ${err.message}`, {
             column: body.column,
             skill: result.skill || undefined,
           });
         });
-      } else {
-        cancelActiveRun(cardId, `card moved to ${getColumnName(body.column)}`);
       }
       return Response.json(result);
     } catch (err: any) {
@@ -655,13 +784,18 @@ async function handleApiRoute(url: URL, req: Request, config: MCConfig): Promise
         return Response.json({ error: 'Card not found' }, { status: 404 });
       }
 
-      const updates: Partial<Pick<Card, 'title' | 'description' | 'tags' | 'modelRef'>> = {};
+      const updates: Partial<
+        Pick<Card, 'title' | 'description' | 'tags' | 'modelRef' | 'attentionMode' | 'attentionReason' | 'attentionUpdatedAt'>
+      > = {};
+      let requestedStatus: Card['status'] | null = null;
       if ('title' in body) updates.title = typeof body.title === 'string' ? body.title : existing.title;
       if ('description' in body) {
         updates.description = typeof body.description === 'string' ? body.description : existing.description;
       }
       if ('tags' in body) {
-        updates.tags = Array.isArray(body.tags) ? body.tags.map((tag: unknown) => String(tag).trim()).filter(Boolean) : existing.tags;
+        updates.tags = Array.isArray(body.tags)
+          ? body.tags.map((tag: unknown) => String(tag).trim()).filter(Boolean)
+          : existing.tags;
       }
       if ('modelRef' in body) {
         const rawModel = body.modelRef == null ? '' : String(body.modelRef).trim();
@@ -685,20 +819,200 @@ async function handleApiRoute(url: URL, req: Request, config: MCConfig): Promise
           updates.modelRef = canonicalRef === `${configured.provider}/${configured.model}` ? null : canonicalRef;
         }
       }
+      if ('status' in body) {
+        if (!isCardStatus(body.status)) {
+          return Response.json({ error: 'Invalid status' }, { status: 400 });
+        }
+        requestedStatus = body.status;
+      }
+      if (('attentionMode' in body || 'attentionReason' in body) && existing.status !== 'awaiting_human') {
+        const nextMode: AttentionMode =
+          body.attentionMode === 'waiting_on_patrick'
+            ? 'waiting_on_patrick'
+            : 'attentionMode' in body
+              ? 'none'
+              : existing.attentionMode;
+        const requestedReason =
+          'attentionReason' in body
+            ? body.attentionReason == null
+              ? ''
+              : String(body.attentionReason).trim()
+            : existing.attentionReason || '';
+        updates.attentionMode = nextMode;
+        updates.attentionReason = nextMode === 'waiting_on_patrick' && requestedReason ? requestedReason : null;
+        updates.attentionUpdatedAt = new Date().toISOString();
+      }
 
-      const card = updateCard(config, cardId, updates);
+      let card = updateCard(config, cardId, updates);
       if ('modelRef' in updates) {
         await applyCardModelToSession(card);
+      }
+      if (requestedStatus && requestedStatus !== existing.status) {
+        card = setCardStatus(config, cardId, requestedStatus, {
+          column: card.column,
+          skill: card.skillTriggered || undefined,
+        });
       }
 
       let modelIndex: Map<string, ModelOption> | undefined;
       try {
         modelIndex = (await getModelOptions()).byRef;
       } catch {}
-      return Response.json(decorateCardWithModelView(card, modelIndex));
+      return Response.json(decorateCard(card, modelIndex));
     } catch (err: any) {
       return Response.json({ error: err.message }, { status: 400 });
     }
+  }
+
+  // POST /api/cards/:id/read — mark the card as read/viewed
+  const readMatch = url.pathname.match(/^\/api\/cards\/([^/]+)\/read$/);
+  if (readMatch && req.method === 'POST') {
+    const cardId = readMatch[1];
+    try {
+      const existing = getCard(config, cardId);
+      if (!existing) {
+        return Response.json({ error: 'Card not found' }, { status: 404 });
+      }
+      const card = updateCard(config, cardId, { lastViewedAt: new Date().toISOString() });
+      let modelIndex: Map<string, ModelOption> | undefined;
+      try {
+        modelIndex = (await getModelOptions()).byRef;
+      } catch {}
+      return Response.json(decorateCard(card, modelIndex));
+    } catch (err: any) {
+      return Response.json({ error: err.message }, { status: 400 });
+    }
+  }
+
+  // POST /api/cards/:id/question — mark a card as waiting on human input
+  const questionMatch = url.pathname.match(/^\/api\/cards\/([^/]+)\/question$/);
+  if (questionMatch && req.method === 'POST') {
+    const cardId = questionMatch[1];
+    const body = await req.json();
+    const text = typeof body?.text === 'string' ? body.text.trim() : '';
+    if (!text) return Response.json({ error: 'text required' }, { status: 400 });
+
+    const card = getCard(config, cardId);
+    if (!card) return Response.json({ error: 'Card not found' }, { status: 404 });
+    if (!card.sessionId) return Response.json({ error: 'Card has no bound session' }, { status: 400 });
+
+    const now = new Date().toISOString();
+    updateCard(config, cardId, {
+      attentionMode: 'waiting_on_patrick',
+      attentionReason: text,
+      attentionUpdatedAt: now,
+    });
+    setCardStatus(config, cardId, 'awaiting_human', {
+      column: card.column,
+      skill: card.skillTriggered || undefined,
+    });
+    addActivity(config, cardId, 'agent_question', text, {
+      actor: 'agent' as ActivityActor,
+      column: card.column,
+      skill: card.skillTriggered || undefined,
+    });
+    if (card.logFile) {
+      appendLog(card.logFile, `\n[missioncontrol] Agent requested human input: ${text}\n`);
+    }
+    return Response.json({ ok: true, status: 'awaiting_human' });
+  }
+
+  // POST /api/cards/:id/reply — resume a card run from the human's reply
+  const replyMatch = url.pathname.match(/^\/api\/cards\/([^/]+)\/reply$/);
+  if (replyMatch && req.method === 'POST') {
+    const cardId = replyMatch[1];
+    const body = await req.json();
+    const text = typeof body?.text === 'string' ? body.text.trim() : '';
+    if (!text) return Response.json({ error: 'text required' }, { status: 400 });
+
+    const currentCard = getCard(config, cardId);
+    if (!currentCard) return Response.json({ error: 'Card not found' }, { status: 404 });
+    if (!currentCard.sessionId) return Response.json({ error: 'Card has no bound session' }, { status: 400 });
+    if (currentCard.status !== 'awaiting_human') {
+      return Response.json({ error: 'Card is not awaiting human input' }, { status: 400 });
+    }
+
+    await applyCardModelToSession(currentCard);
+    cancelActiveRun(cardId, 'human replied');
+
+    const logFile =
+      currentCard.logFile ||
+      path.join(config.logsDir, `${currentCard.id}-${new Date().toISOString().replace(/[:.]/g, '-')}.log`);
+    let resumedCard = updateCard(config, cardId, {
+      logFile,
+      attentionMode: 'none',
+      attentionReason: null,
+      attentionUpdatedAt: new Date().toISOString(),
+    });
+    resumedCard = setCardStatus(config, cardId, 'running', {
+      column: resumedCard.column,
+      skill: resumedCard.skillTriggered || undefined,
+    });
+
+    addActivity(config, cardId, 'human_reply', text, {
+      actor: 'human' as ActivityActor,
+      column: resumedCard.column,
+      skill: resumedCard.skillTriggered || undefined,
+    });
+
+    const columnName = getColumnName(resumedCard.column);
+    addActivity(
+      config,
+      cardId,
+      'run_started',
+      `Resumed ${columnName} after human reply in durable OpenClaw session ${shortId(resumedCard.sessionId)}`,
+      { column: resumedCard.column, skill: resumedCard.skillTriggered || undefined, sessionId: resumedCard.sessionId || undefined },
+    );
+
+    appendLog(
+      logFile,
+      `\n=== Mission Control human reply ===\n` +
+        `[received] ${new Date().toISOString()}\n` +
+        `[card] ${resumedCard.title} (${resumedCard.id})\n` +
+        `[stage] ${columnName}\n` +
+        `[sessionId] ${resumedCard.sessionId}\n` +
+        `[human-reply] ${text}\n\n`,
+    );
+
+    const prompt = [
+      'Mission Control durable card session update.',
+      'Resume the existing Mission Control work thread for this card. Continue from prior work in this same session instead of starting over.',
+      `Card title: ${resumedCard.title}`,
+      `Card ID: ${resumedCard.id}`,
+      `Current stage: ${columnName}`,
+      resumedCard.skillTriggered ? `Requested skill/stage mode: ${resumedCard.skillTriggered}` : null,
+      `Human reply to your question:\n${text}`,
+      `Task: continue advancing this card in the ${columnName} stage using the human's answer above. If you need more input, ask one new clear question via the Mission Control callback URL and then stop.`,
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+
+    const proc = Bun.spawn(
+      ['openclaw', 'agent', '--session-id', String(resumedCard.sessionId), '--message', prompt, '--timeout', AGENT_TIMEOUT_SECONDS],
+      {
+        cwd: config.projectDir,
+        env: buildCardAgentEnv(cardId),
+        stdout: 'pipe',
+        stderr: 'pipe',
+      },
+    );
+
+    const runId = crypto.randomUUID();
+    ACTIVE_RUNS.set(cardId, { runId, proc });
+    void pipeStreamToLog(proc.stdout, logFile);
+    void pipeStreamToLog(proc.stderr, logFile, '[stderr] ');
+    attachRunExitHandler({
+      cardId,
+      runId,
+      proc,
+      logFile,
+      columnName,
+      sessionId: resumedCard.sessionId,
+      column: resumedCard.column,
+      skill: resumedCard.skillTriggered,
+    });
+
+    return Response.json({ ok: true, status: 'running' });
   }
 
   // DELETE /api/cards/:id
@@ -755,18 +1069,19 @@ async function handleApiRoute(url: URL, req: Request, config: MCConfig): Promise
     return Response.json(card.activity || []);
   }
 
-  // POST /api/cards/:id/activity — add activity entry
+  // POST /api/cards/:id/activity — add human comment entry
   const activityPostMatch = url.pathname.match(/^\/api\/cards\/([^/]+)\/activity$/);
   if (activityPostMatch && req.method === 'POST') {
     const cardId = activityPostMatch[1];
     const body = await req.json();
-    const type = body.type || 'comment';
-    const text = body.text || '';
+    const text = typeof body.text === 'string' ? body.text.trim() : '';
     if (!text) return Response.json({ error: 'text required' }, { status: 400 });
+    if ('type' in body || 'actor' in body) {
+      return Response.json({ error: 'activity type/actor cannot be set by clients' }, { status: 400 });
+    }
     try {
-      const card = addActivity(config, cardId, type, text, {
-        column: body.column,
-        skill: body.skill,
+      const card = addActivity(config, cardId, 'human_comment', text, {
+        actor: 'human' as ActivityActor,
       });
       return Response.json(card.activity);
     } catch (err: any) {
@@ -828,6 +1143,7 @@ process.on('SIGINT', shutdown);
 // ─── Start ──────────────────────────────────────────────────────
 async function start() {
   const port = await findPort();
+  SERVER_PORT = port;
   const startTime = Date.now();
 
   const server = Bun.serve({

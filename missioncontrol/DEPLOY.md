@@ -246,6 +246,17 @@ app.get('/healthz', async (req, res) => {
 
 Mission Control state lives on the Northflank volume at `/data/.gstack/`. This directory is created automatically by `ensureStateDir()`. The volume persists across deploys and restarts — your board state and logs survive redeployments.
 
+## Release Notes for 2026-03-23 Features
+
+The 2026-03-23 **Unread Activity + Needs Patrick Indicators** and **Card-Level Model Selector** features do **not** require new deployment-specific environment variables.
+
+They reuse:
+- the existing Mission Control board state file under `/data/.gstack/`
+- the existing durable-session plumbing
+- the existing OpenClaw model catalog / agent default-model configuration
+
+If you deploy code that includes those features, the only operational requirement is that Mission Control can still read/write its normal state directory and that OpenClaw model configuration remains valid.
+
 ## Troubleshooting
 
 **Board shows "Connection error" (red dot):**

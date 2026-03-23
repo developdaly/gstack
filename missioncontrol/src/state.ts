@@ -5,34 +5,84 @@ import type { MCConfig } from './config';
 
 // Fixed pipeline columns from AGENTS.md
 export const COLUMNS = [
-  { id: "backlog", name: "Backlog", skill: null },
-  { id: "office-hours", name: "Office Hours", skill: "/office-hours" },
-  { id: "ceo-review", name: "CEO Review", skill: "/plan-ceo-review" },
-  { id: "eng-review", name: "Eng Review", skill: "/plan-eng-review" },
-  { id: "design-review", name: "Design Review", skill: "/plan-design-review" },
-  { id: "design", name: "Design", skill: "/design-consultation" },
-  { id: "implementation", name: "Implementation", skill: null },
-  { id: "code-review", name: "Code Review", skill: "/review" },
-  { id: "debug", name: "Debug", skill: "/debug" },
-  { id: "qa", name: "QA", skill: "/qa" },
-  { id: "ship", name: "Ship", skill: "/ship" },
-  { id: "docs", name: "Docs", skill: "/document-release" },
-  { id: "retro", name: "Retro", skill: "/retro" },
-  { id: "done", name: "Done", skill: null },
+  { id: 'backlog', name: 'Backlog', skill: null },
+  { id: 'office-hours', name: 'Office Hours', skill: '/office-hours' },
+  { id: 'ceo-review', name: 'CEO Review', skill: '/plan-ceo-review' },
+  { id: 'eng-review', name: 'Eng Review', skill: '/plan-eng-review' },
+  { id: 'design-review', name: 'Design Review', skill: '/plan-design-review' },
+  { id: 'design', name: 'Design', skill: '/design-consultation' },
+  { id: 'implementation', name: 'Implementation', skill: null },
+  { id: 'code-review', name: 'Code Review', skill: '/review' },
+  { id: 'debug', name: 'Debug', skill: '/debug' },
+  { id: 'qa', name: 'QA', skill: '/qa' },
+  { id: 'ship', name: 'Ship', skill: '/ship' },
+  { id: 'docs', name: 'Docs', skill: '/document-release' },
+  { id: 'retro', name: 'Retro', skill: '/retro' },
+  { id: 'done', name: 'Done', skill: null },
 ] as const;
 
-export type ColumnId = typeof COLUMNS[number]["id"];
-export type CardStatus = "idle" | "pending" | "running" | "complete" | "failed";
+export type ColumnId = (typeof COLUMNS)[number]['id'];
+export type CardStatus = 'idle' | 'pending' | 'running' | 'complete' | 'failed' | 'awaiting_human';
+export type AttentionMode = 'none' | 'waiting_on_patrick';
+export type ActivityActor = 'system' | 'agent' | 'human';
+export type ActivityType =
+  | 'card_created'
+  | 'session_linked'
+  | 'run_started'
+  | 'run_completed'
+  | 'run_failed'
+  | 'run_cancelled'
+  | 'stage_changed'
+  | 'status_changed'
+  | 'agent_comment'
+  | 'human_comment'
+  | 'agent_question'
+  | 'human_reply'
+  | 'unknown_event';
 
-export type ActivityType = "created" | "moved" | "skill_start" | "skill_complete" | "skill_failed" | "comment";
+const VALID_CARD_STATUSES = new Set<CardStatus>([
+  'idle',
+  'pending',
+  'running',
+  'complete',
+  'failed',
+  'awaiting_human',
+]);
+
+const VALID_ACTIVITY_TYPES = new Set<ActivityType>([
+  'card_created',
+  'session_linked',
+  'run_started',
+  'run_completed',
+  'run_failed',
+  'run_cancelled',
+  'stage_changed',
+  'status_changed',
+  'agent_comment',
+  'human_comment',
+  'agent_question',
+  'human_reply',
+  'unknown_event',
+]);
+
+const VALID_ACTIVITY_ACTORS = new Set<ActivityActor>(['system', 'agent', 'human']);
 
 export interface ActivityEntry {
   id: string;
   type: ActivityType;
+  actor: ActivityActor;
   timestamp: string;
   text: string;
   column?: string;
   skill?: string;
+  fromColumn?: string;
+  toColumn?: string;
+  fromStatus?: string;
+  toStatus?: string;
+  sessionId?: string;
+  sessionKey?: string;
+  exitCode?: number;
+  reason?: string;
 }
 
 export interface Card {
@@ -48,6 +98,10 @@ export interface Card {
   designDocs: string[];
   tags: string[];
   modelRef: string | null;
+  lastViewedAt: string | null;
+  attentionMode: AttentionMode;
+  attentionReason: string | null;
+  attentionUpdatedAt: string | null;
   activity: ActivityEntry[];
   sessionId: string | null;
   sessionKey: string | null;
@@ -64,27 +118,136 @@ const DEFAULT_STATE: BoardState = {
   cards: [],
 };
 
+export function isCardStatus(raw: unknown): raw is CardStatus {
+  return typeof raw === 'string' && VALID_CARD_STATUSES.has(raw as CardStatus);
+}
+
+function normalizeAttentionMode(raw: unknown): AttentionMode {
+  return raw === 'waiting_on_patrick' ? 'waiting_on_patrick' : 'none';
+}
+
+function defaultActorForActivityType(type: ActivityType): ActivityActor {
+  switch (type) {
+    case 'agent_comment':
+    case 'agent_question':
+      return 'agent';
+    case 'human_comment':
+    case 'human_reply':
+      return 'human';
+    default:
+      return 'system';
+  }
+}
+
+function columnIdFromNameOrId(raw: unknown): string | undefined {
+  if (typeof raw !== 'string') return undefined;
+  const value = raw.trim();
+  if (!value) return undefined;
+  const direct = COLUMNS.find((column) => column.id === value);
+  if (direct) return direct.id;
+  const byName = COLUMNS.find((column) => column.name.toLowerCase() === value.toLowerCase());
+  return byName?.id;
+}
+
+function legacyActivityType(raw: any): ActivityType {
+  const rawType = typeof raw?.type === 'string' ? raw.type : '';
+  if (VALID_ACTIVITY_TYPES.has(rawType as ActivityType)) {
+    return rawType as ActivityType;
+  }
+
+  switch (rawType) {
+    case 'created':
+      return 'card_created';
+    case 'moved':
+      return 'stage_changed';
+    case 'skill_start':
+      return 'run_started';
+    case 'skill_complete':
+      return 'run_completed';
+    case 'skill_failed':
+      return 'run_failed';
+    case 'question':
+      return 'agent_question';
+    case 'reply':
+      return 'human_reply';
+    case 'comment': {
+      const text = typeof raw?.text === 'string' ? raw.text : '';
+      if (/^Linked durable OpenClaw session\s+/i.test(text)) {
+        return 'session_linked';
+      }
+      const actor = typeof raw?.actor === 'string' ? raw.actor : '';
+      return actor === 'agent' ? 'agent_comment' : 'human_comment';
+    }
+    default:
+      return 'unknown_event';
+  }
+}
+
+function normalizeActivityActor(raw: unknown, type: ActivityType): ActivityActor {
+  if (typeof raw === 'string' && VALID_ACTIVITY_ACTORS.has(raw as ActivityActor)) {
+    return raw as ActivityActor;
+  }
+  return defaultActorForActivityType(type);
+}
+
+function normalizeStatusValue(raw: unknown): string | undefined {
+  return typeof raw === 'string' && raw.trim() ? raw.trim() : undefined;
+}
+
 function normalizeActivityEntry(raw: any): ActivityEntry {
+  const type = legacyActivityType(raw);
+  const text = typeof raw?.text === 'string' ? raw.text : '';
+  const column = typeof raw?.column === 'string' && raw.column ? raw.column : undefined;
+
+  let fromColumn = columnIdFromNameOrId(raw?.fromColumn);
+  let toColumn = columnIdFromNameOrId(raw?.toColumn) || columnIdFromNameOrId(column);
+  if (type === 'stage_changed' && (!fromColumn || !toColumn)) {
+    const match = text.match(/^Moved from\s+(.+?)\s+to\s+(.+)$/i);
+    if (match) {
+      fromColumn = fromColumn || columnIdFromNameOrId(match[1]);
+      toColumn = toColumn || columnIdFromNameOrId(match[2]);
+    }
+  }
+
+  let sessionId = typeof raw?.sessionId === 'string' && raw.sessionId ? raw.sessionId : undefined;
+  let sessionKey = typeof raw?.sessionKey === 'string' && raw.sessionKey ? raw.sessionKey : undefined;
+  if (type === 'session_linked' && !sessionId) {
+    const match = text.match(/session\s+([a-f0-9]{8})/i);
+    if (match) sessionId = match[1];
+  }
+
+  let exitCode = typeof raw?.exitCode === 'number' && Number.isFinite(raw.exitCode) ? raw.exitCode : undefined;
+  if ((type === 'run_failed' || type === 'unknown_event') && exitCode == null) {
+    const match = text.match(/\(exit\s+(-?\d+)\)/i);
+    if (match) exitCode = Number(match[1]);
+  }
+
   return {
     id: typeof raw?.id === 'string' && raw.id ? raw.id : crypto.randomUUID(),
-    type: raw?.type || 'comment',
+    type,
+    actor: normalizeActivityActor(raw?.actor, type),
     timestamp: typeof raw?.timestamp === 'string' && raw.timestamp ? raw.timestamp : new Date().toISOString(),
-    text: typeof raw?.text === 'string' ? raw.text : '',
-    ...(raw?.column ? { column: String(raw.column) } : {}),
-    ...(raw?.skill ? { skill: String(raw.skill) } : {}),
+    text,
+    ...(column ? { column } : {}),
+    ...(typeof raw?.skill === 'string' && raw.skill ? { skill: String(raw.skill) } : {}),
+    ...(fromColumn ? { fromColumn } : {}),
+    ...(toColumn ? { toColumn } : {}),
+    ...(normalizeStatusValue(raw?.fromStatus) ? { fromStatus: normalizeStatusValue(raw?.fromStatus)! } : {}),
+    ...(normalizeStatusValue(raw?.toStatus) ? { toStatus: normalizeStatusValue(raw?.toStatus)! } : {}),
+    ...(sessionId ? { sessionId } : {}),
+    ...(sessionKey ? { sessionKey } : {}),
+    ...(typeof exitCode === 'number' && Number.isFinite(exitCode) ? { exitCode } : {}),
+    ...(typeof raw?.reason === 'string' && raw.reason ? { reason: raw.reason } : {}),
   } as ActivityEntry;
 }
 
 function normalizeCard(raw: any): Card {
   const now = new Date().toISOString();
   const column = COLUMNS.some((col) => col.id === raw?.column) ? raw.column : 'backlog';
-  const status: CardStatus =
-    raw?.status === 'pending' ||
-    raw?.status === 'running' ||
-    raw?.status === 'complete' ||
-    raw?.status === 'failed'
-      ? raw.status
-      : 'idle';
+  const status: CardStatus = isCardStatus(raw?.status) ? raw.status : 'idle';
+  const attentionMode = normalizeAttentionMode(raw?.attentionMode);
+  const attentionReason =
+    typeof raw?.attentionReason === 'string' && raw.attentionReason.trim() ? raw.attentionReason.trim() : null;
 
   return {
     id: typeof raw?.id === 'string' && raw.id ? raw.id : crypto.randomUUID(),
@@ -100,6 +263,11 @@ function normalizeCard(raw: any): Card {
     designDocs: Array.isArray(raw?.designDocs) ? raw.designDocs.map(String) : [],
     tags: Array.isArray(raw?.tags) ? raw.tags.map(String) : [],
     modelRef: typeof raw?.modelRef === 'string' && raw.modelRef.trim() ? raw.modelRef.trim() : null,
+    lastViewedAt: typeof raw?.lastViewedAt === 'string' && raw.lastViewedAt ? raw.lastViewedAt : null,
+    attentionMode,
+    attentionReason: attentionMode === 'waiting_on_patrick' ? attentionReason : null,
+    attentionUpdatedAt:
+      typeof raw?.attentionUpdatedAt === 'string' && raw.attentionUpdatedAt ? raw.attentionUpdatedAt : null,
     activity: Array.isArray(raw?.activity) ? raw.activity.map(normalizeActivityEntry) : [],
     sessionId: typeof raw?.sessionId === 'string' && raw.sessionId ? raw.sessionId : null,
     sessionKey: typeof raw?.sessionKey === 'string' && raw.sessionKey ? raw.sessionKey : null,
@@ -137,23 +305,23 @@ export function saveState(config: MCConfig, state: BoardState): void {
   fs.renameSync(tmpFile, config.boardStateFile);
 }
 
+type ActivityExtra = Omit<Partial<ActivityEntry>, 'id' | 'type' | 'timestamp' | 'text'>;
+
 /**
  * Append an activity entry to a card (in-memory). Caller must saveState().
  */
-function pushActivity(
-  card: Card,
-  type: ActivityType,
-  text: string,
-  extra?: { column?: string; skill?: string },
-): void {
+function pushActivity(card: Card, type: ActivityType, text: string, extra?: ActivityExtra): void {
   if (!card.activity) card.activity = [];
-  card.activity.push({
-    id: crypto.randomUUID(),
-    type,
-    timestamp: new Date().toISOString(),
-    text,
-    ...extra,
-  });
+  card.activity.push(
+    normalizeActivityEntry({
+      id: crypto.randomUUID(),
+      type,
+      actor: extra?.actor,
+      timestamp: new Date().toISOString(),
+      text,
+      ...extra,
+    }),
+  );
 }
 
 /**
@@ -164,7 +332,7 @@ export function addActivity(
   cardId: string,
   type: ActivityType,
   text: string,
-  extra?: { column?: string; skill?: string },
+  extra?: ActivityExtra,
 ): Card {
   const state = loadState(config);
   const idx = state.cards.findIndex((c) => c.id === cardId);
@@ -198,13 +366,17 @@ export function createCard(
     designDocs: [],
     tags,
     modelRef: null,
+    lastViewedAt: null,
+    attentionMode: 'none',
+    attentionReason: null,
+    attentionUpdatedAt: null,
     activity: [],
     sessionId: null,
     sessionKey: null,
     sessionFile: null,
   };
 
-  pushActivity(card, 'created', 'Card created');
+  pushActivity(card, 'card_created', 'Card created');
 
   const state = loadState(config);
   state.cards.push(card);
@@ -239,20 +411,34 @@ export function moveCard(
   const card = state.cards[idx];
 
   const fromColumn = card.column;
+  const previousStatus = card.status;
   card.column = targetColumn;
   card.movedAt = now;
 
-  const colName = columnDef.name;
-  pushActivity(card, 'moved', `Moved from ${fromColumn} to ${colName}`, { column: targetColumn });
+  pushActivity(card, 'stage_changed', `Moved from ${fromColumn} to ${columnDef.name}`, {
+    column: targetColumn,
+    fromColumn,
+    toColumn: targetColumn,
+  });
 
+  let nextStatus: CardStatus;
   if (skill) {
-    card.status = 'pending';
+    nextStatus = 'pending';
     card.skillTriggered = skill;
     const timestamp = now.replace(/[:.]/g, '-');
     card.logFile = path.join(config.logsDir, `${cardId}-${timestamp}.log`);
   } else {
-    card.status = 'idle';
+    nextStatus = 'idle';
     card.skillTriggered = null;
+  }
+
+  card.status = nextStatus;
+  if (previousStatus !== nextStatus) {
+    pushActivity(card, 'status_changed', `Status changed from ${previousStatus} to ${nextStatus}`, {
+      column: targetColumn,
+      fromStatus: previousStatus,
+      toStatus: nextStatus,
+    });
   }
 
   saveState(config, state);
@@ -266,7 +452,26 @@ export function moveCard(
 export function updateCard(
   config: MCConfig,
   cardId: string,
-  updates: Partial<Pick<Card, 'title' | 'description' | 'tags' | 'modelRef' | 'status' | 'logFile' | 'designDocs' | 'skillTriggered' | 'sessionId' | 'sessionKey' | 'sessionFile'>>,
+  updates: Partial<
+    Pick<
+      Card,
+      | 'title'
+      | 'description'
+      | 'tags'
+      | 'modelRef'
+      | 'status'
+      | 'logFile'
+      | 'designDocs'
+      | 'skillTriggered'
+      | 'sessionId'
+      | 'sessionKey'
+      | 'sessionFile'
+      | 'lastViewedAt'
+      | 'attentionMode'
+      | 'attentionReason'
+      | 'attentionUpdatedAt'
+    >
+  >,
 ): Card {
   const state = loadState(config);
   const idx = state.cards.findIndex((c) => c.id === cardId);
@@ -276,6 +481,35 @@ export function updateCard(
 
   const card = state.cards[idx];
   Object.assign(card, updates);
+  saveState(config, state);
+
+  return card;
+}
+
+export function setCardStatus(
+  config: MCConfig,
+  cardId: string,
+  nextStatus: CardStatus,
+  extra?: ActivityExtra,
+): Card {
+  const state = loadState(config);
+  const idx = state.cards.findIndex((c) => c.id === cardId);
+  if (idx === -1) {
+    throw new Error(`Card not found: ${cardId}`);
+  }
+
+  const card = state.cards[idx];
+  const previousStatus = card.status;
+  if (previousStatus === nextStatus) {
+    return card;
+  }
+
+  card.status = nextStatus;
+  pushActivity(card, 'status_changed', `Status changed from ${previousStatus} to ${nextStatus}`, {
+    ...extra,
+    fromStatus: previousStatus,
+    toStatus: nextStatus,
+  });
   saveState(config, state);
 
   return card;
