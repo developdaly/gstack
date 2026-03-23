@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.11.11.0] - 2026-03-23 — Mission Control: Awaiting Human workflow states + QA fix
+
+### Added
+
+- **Mission Control skill** ([missioncontrol](./missioncontrol/)) — persistent visual Kanban board daemon for managing agent tasks through the gstack skill pipeline. Cards bind to durable OpenClaw sessions, preserving context across stage moves.
+- **Awaiting Human workflow state.** Agents can POST a question to Mission Control via `POST /api/cards/:id/question`, moving the card into `awaiting_human` state. The question is rendered as a visible pill on the tile and in the modal. Patrick's reply resumes the exact same session thread.
+- **Attention layer.** Cards expose derived unread/attention state: `hasUnreadOutput`, `unreadCommentCount`, and `attentionLevel` (`none` | `output` | `comment` | `patrick`), computed server-side and returned in `GET /api/state`.
+- **`POST /api/cards/:id/read`** endpoint — marks a card viewed, updating `lastViewedAt` and clearing unread output/comment indicators.
+- **`POST /api/cards/:id/reply`** endpoint — sends Patrick's reply into the bound durable session and resumes the agent run.
+- **Card-level model selector** — per-card model override via PATCH, rendered as a select in the card modal, with model catalog fetched from the gateway at runtime.
+- **Typed activity timeline** — cards carry a structured `activity[]` array with typed entries (`card_created`, `run_started`, `agent_question`, `human_reply`, etc.) and per-entry `actor` (`agent` | `human` | `system`).
+- **Server info on login screen and header** — version hash and server identity shown on login and in the board header.
+- **Regression test coverage** for base-path route normalization (`test/missioncontrol-base-path-regression.test.ts`, 5 tests).
+
+### Fixed
+
+- **Base-path routing bug.** When `MC_BASE_PATH=/missioncontrol` is set, the UI fetched `/missioncontrol/api/*` but the server only routed raw `/api/*` — causing a 404 poll loop and empty board. Fixed by normalizing the prefix in a shared `stripBasePath()` helper before all route matching.
+- **PATCH allowlist.** `PATCH /api/cards/:id` previously accepted arbitrary keys via `Object.assign`; now builds a typed `Partial<Pick<Card, ...>>` update from an explicit allowlist.
+- **Activity type injection prevention.** `POST /api/cards/:id/activity` now rejects requests that include `type` or `actor` fields — only `human_comment` entries from authenticated users are accepted.
+- **Top-level error handler** added to server to prevent socket hang-ups on unexpected throws.
+
+### Changed
+
+- Cards now bind to durable OpenClaw sessions instead of firing one-off webhook executions. Each stage move resumes the same session via `openclaw agent --session-id`.
+- Attention state (`attentionMode`, `attentionReason`, `attentionUpdatedAt`, `lastViewedAt`) is stored orthogonal to `card.status` — execution lifecycle and human-attention signals are separate fields.
 ## [0.11.10.0] - 2026-03-23 — CI Evals on Ubicloud
 
 ### Added

@@ -199,3 +199,66 @@ Like the attention-indicator card, this was shipped at the **feature** level on 
 - QA validated valid/invalid/clear PATCH behavior, unavailable saved refs, durable-session override persistence, and live served UI wiring
 - Final implementation fix replaced alert-based save failures with inline field errors and was verified in served HTML after restarting Mission Control
 - Ship approved for the feature scope with the branch-level caveat preserved
+
+## 2026-03-23 — Agent Questions in Card Comments + Reply-to-Resume
+
+### What changed
+
+Mission Control cards can now pause for **human input inside the card itself** and then resume the **same durable OpenClaw session** once Patrick replies.
+
+**Before:** An agent could continue a durable card session across stage moves, but there was no built-in human-in-the-loop pause. If the agent needed input, there was no first-class way to surface the question on the card, collect the answer in the board UI, and continue the exact same thread.
+
+**After:** An agent can POST a question back to Mission Control, which moves the card into an explicit `awaiting_human` state, renders the question visibly on the card/modal, and exposes a **Reply & Resume Agent** action. Patrick’s reply is sent back into the same durable session so the run continues with full thread context intact.
+
+### Files changed
+
+| File | What |
+|------|------|
+| `src/state.ts` | Added `awaiting_human` status support, expanded typed activity events for question/reply + run lifecycle, tightened normalization/allowlisting, and added explicit status-transition helpers |
+| `src/server.ts` | Added `POST /api/cards/:id/question` and `POST /api/cards/:id/reply`, injected `MC_CARD_API_URL` + `MC_AUTH_TOKEN` into spawned agent runs, preserved `awaiting_human` across process exit, and resumed the same durable session after a human reply |
+| `src/ui.ts` | Added visible question state on the card tile, modal question block, dedicated **Reply & Resume Agent** CTA, awaiting-human styling, and locked generic Attention controls while a reply-to-resume block is active |
+
+### New API behavior
+
+| Endpoint | Behavior |
+|----------|----------|
+| `POST /api/cards/:id/question` | Records an agent-authored question, sets `attentionReason`, and transitions the card into `awaiting_human` |
+| `POST /api/cards/:id/reply` | Records the human reply, clears the blocked state, and resumes the same durable OpenClaw session/thread |
+| `POST /api/cards/:id/activity` | Now rejects client-supplied `type` / `actor` and only accepts plain human comments, closing the forged-activity / XSS path |
+| `GET /api/state` | Continues returning card summaries without full activity payloads, while the modal fetches detailed typed activity on demand |
+
+### New UI behavior
+
+- **Awaiting Human** card status and visual treatment
+- **Visible agent question preview** on blocked cards
+- **Dedicated reply box in the modal** instead of overloading generic comments
+- **Reply & Resume Agent** CTA that resumes the same durable thread
+- **Attention-control lockout** while a reply-to-resume question is active, so the blocked state cannot be hidden accidentally
+
+### Internal env / runtime behavior
+
+No new deployer-managed environment variables are required for this feature.
+
+Mission Control now injects these **internal** env vars into spawned agent runs so they can call back into the board safely:
+
+| Variable | Set by | Purpose |
+|----------|--------|---------|
+| `MC_CARD_API_URL` | Mission Control server | Fully resolved callback URL for the current card |
+| `MC_AUTH_TOKEN` | Mission Control server | Bearer token for authenticated card callback requests |
+
+### Security / integrity fixes included in the feature
+
+- Closed the authenticated forged-activity / CSS-class injection path by allowlisting activity types and refusing client-supplied activity presentation metadata
+- Prevented reply-flow state corruption by validating/applying saved model overrides **before** clearing `awaiting_human`
+- Locked manual Attention controls while a card is actively waiting on a human reply so the reply UI cannot be hidden without resolving the block
+
+### Scope note
+
+This was shipped at the **feature** level on the broader Mission Control working branch. The release notes here cover the human-in-the-loop reply-to-resume slice specifically, not blanket branch-level signoff for every other Mission Control change that happened to coexist on the branch.
+
+### How it was validated
+
+- Final Code Review confirmed the reply-to-resume implementation and enum/UI coverage were complete with no remaining blocking issues
+- QA passed with an isolated end-to-end smoke harness using a temp Mission Control state dir and a fake `openclaw` binary
+- The smoke flow verified: stage move → durable run → agent `POST /question` → card enters `awaiting_human` → Patrick reply in UI/API → same session resumes → card reaches `complete`
+- Ship approved for the feature scope after the final blocked-state and model-override edge cases were fixed

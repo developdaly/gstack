@@ -540,7 +540,57 @@ Shipped in v0.6.5. TemplateContext in gen-skill-docs.ts bakes skill name into pr
 **Priority:** P3
 **Depends on:** Telemetry data showing freeze hook fires in real /investigate sessions
 
+## Mission Control
+
+### Board-level "needs attention" counter (P2)
+
+**What:** Show an "X cards need you" header counter above the board that filters `attentionLevel >= comment` cards.
+
+**Why:** When many cards are present, the board requires scrolling to find which ones need Patrick. A single number at the top provides ambient awareness without scanning.
+
+**Context:** Computed in `refreshState()` on the client from `derived.attentionLevel`. No backend change needed.
+
+**Effort:** S
+**Priority:** P2
+**Depends on:** None
+
+### Auto-detect awaiting_human from session output (P3)
+
+**What:** When an agent session produces output matching question patterns ("?", "choice:", etc.), auto-flip the card to awaiting_human without an explicit API call.
+
+**Why:** Agents that don't use `POST /question` directly still surface blocking questions in stdout. Auto-detection would catch those.
+
+**Context:** Needs an OpenClaw callback protocol or polling pattern to compare session output deltas against question heuristics. Risk: false positives.
+
+**Effort:** L
+**Priority:** P3
+**Depends on:** OpenClaw callback protocol
+
+### Status history graph (P3)
+
+**What:** Per-card sparkline or timeline showing how status/attention has changed over time.
+
+**Why:** Provides audit trail and debugging signal for long-running or problematic cards.
+
+**Context:** Requires persisting status-change events to the activity trail (already done as `status_changed` entries). UI rendering is the remaining piece.
+
+**Effort:** M
+**Priority:** P3
+**Depends on:** None (activity trail already records status_changed entries)
+
 ## Completed
+
+### Mission Control core + awaiting_human workflow states (v0.11.11.0)
+- Visual Kanban board daemon with durable OpenClaw session binding
+- Awaiting Human workflow state — agent questions flow to card UI, reply resumes session
+- Attention layer (unread output, unread comments, Patrick-blocked indicator)
+- POST /api/cards/:id/question, /read, /reply endpoints
+- Typed activity timeline with allowlisted types and per-entry actor
+- Card-level model selector with gateway catalog integration
+- PATCH allowlist enforced server-side
+- Base-path routing fix (ISSUE-QA-001) with regression test coverage
+- Server info on login screen and header
+**Completed:** v0.11.11.0 (2026-03-23)
 
 ### CI eval pipeline (v0.9.9.0)
 - GitHub Actions eval upload on Ubicloud runners ($0.006/run)
