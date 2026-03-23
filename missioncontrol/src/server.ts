@@ -30,6 +30,7 @@ import {
   type Card,
 } from './state';
 import { generateBoardHTML } from './ui';
+import { stripBasePath } from './base-path';
 import { mergeSessionEntry, resolveSessionTranscriptPath, resolveStorePath, updateSessionStore } from '/openclaw/packages/moltbot/node_modules/openclaw/src/config/sessions.ts';
 import { normalizeAgentId } from '/openclaw/packages/moltbot/node_modules/openclaw/src/routing/session-key.ts';
 import { loadGatewayModelCatalog, type GatewayModelChoice } from '/openclaw/packages/moltbot/node_modules/openclaw/src/gateway/server-model-catalog.ts';
@@ -1152,9 +1153,10 @@ async function start() {
     fetch: async (req) => {
       try {
         const url = new URL(req.url);
+        const routedPath = stripBasePath(url.pathname, MC_BASE_PATH);
 
         // Health check — no auth
-        if (url.pathname === '/health') {
+        if (routedPath === '/health') {
           return Response.json({
             status: 'healthy',
             uptime: Math.floor((Date.now() - startTime) / 1000),
@@ -1162,7 +1164,7 @@ async function start() {
         }
 
         // Public server info — no auth, no secrets
-        if (url.pathname === '/api/info') {
+        if (routedPath === '/api/info') {
           const state = loadState(config);
           const version = readVersionHash() || process.env.NORTHFLANK_GIT_COMMIT_SHA || 'dev';
           return Response.json({
@@ -1176,7 +1178,7 @@ async function start() {
         }
 
         // Login — no auth required
-        if (url.pathname === '/auth/login' && req.method === 'POST') {
+        if (routedPath === '/auth/login' && req.method === 'POST') {
           let body: any;
           try {
             body = await req.json();
@@ -1195,23 +1197,25 @@ async function start() {
         }
 
         // Auth check — no auth required
-        if (url.pathname === '/auth/check') {
+        if (routedPath === '/auth/check') {
           return Response.json({ authenticated: isAuthenticated(req) });
         }
 
         // Board HTML — always served (JS handles login state)
-        if (url.pathname === '/' && req.method === 'GET') {
+        if (routedPath === '/' && req.method === 'GET') {
           return new Response(generateBoardHTML(MC_BASE_PATH), {
             headers: { 'Content-Type': 'text/html' },
           });
         }
 
         // All /api/* routes require auth (cookie or bearer)
-        if (url.pathname.startsWith('/api/')) {
+        if (routedPath.startsWith('/api/')) {
           if (!isAuthenticated(req) && !isCliAuthenticated(req)) {
             return Response.json({ error: 'Unauthorized' }, { status: 401 });
           }
-          return handleApiRoute(url, req, config);
+          const routedUrl = new URL(req.url);
+          routedUrl.pathname = routedPath;
+          return handleApiRoute(routedUrl, req, config);
         }
 
         return new Response('Not found', { status: 404 });
