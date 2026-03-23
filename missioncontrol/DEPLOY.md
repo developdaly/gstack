@@ -4,6 +4,11 @@ Mission Control runs alongside OpenClaw on Northflank using the same wrapper ser
 
 ## Architecture
 
+## 2026-03-23 feature note
+
+The typed card timeline release does **not** require any new deployment-specific environment variables, proxy rules, or volume layout changes. It reuses the existing Mission Control server, board state file, and activity storage already described below.
+
+
 ```
 Internet → Northflank (PORT 8080)
               │

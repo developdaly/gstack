@@ -200,6 +200,73 @@ Like the attention-indicator card, this was shipped at the **feature** level on 
 - Final implementation fix replaced alert-based save failures with inline field errors and was verified in served HTML after restarting Mission Control
 - Ship approved for the feature scope with the branch-level caveat preserved
 
+## 2026-03-23 — Typed Card Timeline
+
+### What changed
+
+Mission Control card activity is now a **typed narrative timeline** instead of a loose mix of generic comments and lifecycle text.
+
+**Before:** The activity feed stored ad hoc event strings and coarse event types, so stage moves, status changes, run lifecycle, and human/agent conversation blurred together. You could inspect raw history, but it was not strong enough to serve as the card’s primary audit trail.
+
+**After:** The card modal renders a unified typed timeline with explicit system, stage, status, agent, and human row families. Stage/status transitions now render as structured deltas, run/session lifecycle is typed, and legacy entries are normalized into the new schema. The board poll payload stays lean by omitting full activity arrays until the modal asks for them.
+
+### Files changed
+
+| File | What |
+|------|------|
+| `src/state.ts` | Added typed activity schema, actor/source attribution, legacy normalization, stage/status delta fields, run/session metadata, and `unknown_event` fallback handling |
+| `src/server.ts` | Emits typed timeline entries for moves, status changes, run lifecycle, and session linking; keeps `/api/state` summary-sized; returns full activity only on the card-detail activity endpoint |
+| `src/ui.ts` | Renders the timeline-first modal view with allowlisted row metadata, day separators, stage/status delta chips, comment emphasis, and demoted session/thread details below the timeline |
+| `TIMELINE-DESIGN.md` | Captures the feature-specific design contract for the timeline as the card’s canonical audit trail |
+
+### New / normalized activity model
+
+Mission Control now treats the card timeline as a typed allowlisted stream instead of trusting arbitrary presentation data.
+
+```typescript
+ActivityType =
+  | 'card_created'
+  | 'session_linked'
+  | 'run_started'
+  | 'run_completed'
+  | 'run_failed'
+  | 'run_cancelled'
+  | 'stage_changed'
+  | 'status_changed'
+  | 'agent_comment'
+  | 'human_comment'
+  | 'agent_question'
+  | 'human_reply'
+  | 'unknown_event'
+```
+
+Legacy persisted entries are normalized forward, including old `created`, `moved`, `skill_*`, `question`, `reply`, and generic `comment` rows.
+
+### New UI behavior
+
+- **Unified timeline-first modal** — the timeline becomes the primary card narrative instead of secondary metadata
+- **Newest-first chronology with day separators** — recent operational changes stay easy to scan
+- **Stage/status delta chips** — transitions render as before → after state changes instead of prose blobs
+- **Clear row-family separation** — system/run rows, stage changes, status changes, agent comments/questions, and human comments/replies each render distinctly
+- **Demoted thread/session metadata** — durable session identifiers stay available, but no longer compete with the timeline for attention
+
+### Performance / integrity improvements included
+
+- **Allowlisted rendering path** — the UI maps typed events through internal metadata instead of trusting raw client-controlled row presentation
+- **Slim board polling** — `GET /api/state` returns summary cards without full `activity[]`, avoiding timeline bloat on every board refresh
+- **On-demand detail fetch** — full activity loads only when the card modal opens
+
+### Scope note
+
+This was shipped with **feature-level** signoff on `feat/missioncontrol`. The working branch still contains broader Mission Control work, so this entry documents the typed-timeline slice specifically rather than serving as blanket branch-level merge approval.
+
+### How it was validated
+
+- Implementation/runtime smoke checks confirmed the server starts, `/` loads, `/api/state` returns summary-sized cards, and API flows produce typed entries like `card_created`, `stage_changed`, `status_changed`, and `human_comment`
+- Forged client activity `type` posts were rejected instead of being rendered blindly
+- Isolated QA against a disposable temp-state Mission Control server verified legacy normalization, typed activity fetches, and compatibility with the newer attention/unread layer
+- Final ship validation confirmed the remaining issue was **operational**, not product logic: a stale live board card remained `running` after a timed-out durable QA session, but the current typed-timeline code itself passed verification
+
 ## 2026-03-23 — Agent Questions in Card Comments + Reply-to-Resume
 
 ### What changed

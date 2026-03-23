@@ -6,9 +6,9 @@
 
 - **Mission Control skill** ([missioncontrol](./missioncontrol/)) — persistent visual Kanban board daemon for managing agent tasks through the gstack skill pipeline. Cards bind to durable OpenClaw sessions, preserving context across stage moves.
 - **Awaiting Human workflow state.** Agents can POST a question to Mission Control via `POST /api/cards/:id/question`, moving the card into `awaiting_human` state. The question is rendered as a visible pill on the tile and in the modal. Patrick's reply resumes the exact same session thread.
-- **Attention layer.** Cards expose derived unread/attention state: `hasUnreadOutput`, `unreadCommentCount`, and `attentionLevel` (`none` | `output` | `comment` | `patrick`), computed server-side and returned in `GET /api/state`.
-- **`POST /api/cards/:id/read`** endpoint — marks a card viewed, updating `lastViewedAt` and clearing unread output/comment indicators.
-- **`POST /api/cards/:id/reply`** endpoint — sends Patrick's reply into the bound durable session and resumes the agent run.
+- **Attention layer.** Cards expose derived unread/attention state — `hasUnreadOutput`, `unreadCommentCount`, and `attentionLevel` (`none` | `output` | `comment` | `patrick`) — computed server-side and surfaced in `GET /api/state`.
+- **Mark as read** — opening a card (`POST /api/cards/:id/read`) updates `lastViewedAt` and clears unread output/comment indicators.
+- **Reply endpoint** (`POST /api/cards/:id/reply`) — sends your reply into the bound durable session and resumes the agent run.
 - **Card-level model selector** — per-card model override via PATCH, rendered as a select in the card modal, with model catalog fetched from the gateway at runtime.
 - **Typed activity timeline** — cards carry a structured `activity[]` array with typed entries (`card_created`, `run_started`, `agent_question`, `human_reply`, etc.) and per-entry `actor` (`agent` | `human` | `system`).
 - **Server info on login screen and header** — version hash and server identity shown on login and in the board header.
@@ -25,6 +25,7 @@
 
 - Cards now bind to durable OpenClaw sessions instead of firing one-off webhook executions. Each stage move resumes the same session via `openclaw agent --session-id`.
 - Attention state (`attentionMode`, `attentionReason`, `attentionUpdatedAt`, `lastViewedAt`) is stored orthogonal to `card.status` — execution lifecycle and human-attention signals are separate fields.
+
 ## [0.11.10.0] - 2026-03-23 — CI Evals on Ubicloud
 
 ### Added

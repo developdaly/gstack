@@ -20,6 +20,7 @@ Detailed guides for every gstack skill — philosophy, workflow, and examples.
 | [`/retro`](#retro) | **Eng Manager** | Team-aware weekly retro. Per-person breakdowns, shipping streaks, test health trends, growth opportunities. |
 | [`/browse`](#browse) | **QA Engineer** | Give the agent eyes. Real Chromium browser, real clicks, real screenshots. ~100ms per command. |
 | [`/setup-browser-cookies`](#setup-browser-cookies) | **Session Manager** | Import cookies from your real browser (Chrome, Arc, Brave, Edge) into the headless session. Test authenticated pages. |
+| [`/missioncontrol`](#missioncontrol) | **Mission Control** | Persistent visual Kanban board for tracking agent tasks. Cards bind to durable sessions — you see exactly where each agent is, reply to questions inline, and the agent picks up right where it left off. |
 | | | |
 | **Multi-AI** | | |
 | [`/codex`](#codex) | **Second Opinion** | Independent review from OpenAI Codex CLI. Three modes: code review (pass/fail gate), adversarial challenge, and open consultation with session continuity. Cross-model analysis when both `/review` and `/codex` have run. |
@@ -705,6 +706,59 @@ You:   /setup-browser-cookies github.com
 
 Claude: Imported 12 cookies for github.com from Comet.
 ```
+
+---
+
+## `/missioncontrol`
+
+This is my **Mission Control mode**.
+
+When you're running multiple agents across multiple features, you need a way to see what's happening. Mission Control is a persistent visual Kanban board — a real web app running locally — that tracks every agent task through the gstack skill pipeline. It's what lets you run ten agents in parallel without losing track of any of them.
+
+### How it works
+
+Each card on the board represents a task. Cards move through columns that mirror the gstack skill pipeline: Backlog → Eng Review → Design → Implementation → Code Review → QA → Ship → Done. When an agent starts a card, it binds to a durable OpenClaw session — that session persists across stage moves, so the agent never loses its context.
+
+The board polls the server every 5 seconds. Everything you see is live.
+
+### Awaiting Human
+
+When an agent has a question it can't answer itself — a design decision, an ambiguous requirement, a go/no-go call — it posts the question directly to Mission Control:
+
+```bash
+curl -sS -X POST "$MC_CARD_API_URL/question" \
+  -H "Authorization: Bearer $MC_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{"text":"Which API shape do you prefer — REST or GraphQL?"}'
+```
+
+The card moves to `awaiting_human`, the question appears as a visible pill on the tile, and a reply box opens in the card modal. When you reply, the answer goes back into the exact same session thread. The agent resumes where it left off — no context lost, no copy-paste required.
+
+### Attention indicators
+
+You shouldn't have to scan the board to know what needs you. Each card shows its attention state:
+
+- **None** — all quiet, nothing to do
+- **Output** — new agent output since you last looked (unread log)
+- **Comment** — new activity since you last opened the card
+- **Patrick** — agent is waiting on you specifically (question pending)
+
+Open a card to mark it read. The unread indicators clear automatically.
+
+### Typed activity timeline
+
+Every meaningful event is logged to the card's activity trail: run started, question asked, human replied, stage changed, status updated. You get a full audit trail of what happened and when.
+
+### Running Mission Control
+
+See [`missioncontrol/DEPLOY.md`](../missioncontrol/DEPLOY.md) for setup and environment variables. The quick version:
+
+```bash
+cd missioncontrol
+MISSION_CONTROL_PASSWORD=yourpassword bun src/server.ts
+```
+
+Open `http://localhost:<port>` in your browser. The port is printed on startup and written to `.gstack/missioncontrol-server.json` so the CLI can find it automatically.
 
 ---
 
