@@ -80,7 +80,8 @@ function startMissionControl() {
     MC_PORT: MC_INTERNAL_PORT,
     MC_STATE_FILE: '/data/.gstack/missioncontrol-server.json',
     MISSION_CONTROL_PASSWORD: process.env.MISSION_CONTROL_PASSWORD || process.env.SETUP_PASSWORD || '',
-    OPENCLAW_WEBHOOK_URL: `http://127.0.0.1:${process.env.INTERNAL_GATEWAY_PORT || '18789'}/hooks`,
+    // Optional override if you want Mission Control cards to bind to a non-main agent.
+    MC_OPENCLAW_AGENT_ID: process.env.MC_OPENCLAW_AGENT_ID || 'main',
   };
 
   mcProcess = require('child_process').spawn(
@@ -179,7 +180,7 @@ Add these to your Northflank service environment:
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `MISSION_CONTROL_PASSWORD` | No | Password for the board UI. Falls back to `SETUP_PASSWORD` if unset. If both are empty, no auth. |
-| `OPENCLAW_WEBHOOK_URL` | No | Auto-configured by the wrapper to `http://127.0.0.1:18789/hooks`. Only set manually if your gateway is on a different port. |
+| `MC_OPENCLAW_AGENT_ID` | No | Agent id whose session store Mission Control cards should bind to. Defaults to `main`. |
 | `MC_PORT` | No | Internal port. Default `18790`. |
 | `MC_BASE_PATH` | No | Set to `/missioncontrol` if the proxy does NOT strip the prefix. Leave empty if it does. |
 
@@ -257,10 +258,10 @@ Mission Control state lives on the Northflank volume at `/data/.gstack/`. This d
 - Clear cookies and re-login
 - If no password is set, auth should be disabled entirely
 
-**Webhook not triggering OpenClaw:**
-- Check `OPENCLAW_WEBHOOK_URL` resolves to the gateway
-- Verify the gateway is running on port 18789
-- Check Northflank logs for webhook POST errors
+**Stage move not starting an OpenClaw run:**
+- Verify the `openclaw` CLI is available inside the container
+- Verify the gateway service is healthy (`openclaw gateway status`)
+- Check Northflank logs for Mission Control spawn errors or session-store write errors
 
 **State lost after deploy:**
 - Ensure the Northflank volume is mounted at `/data`

@@ -192,6 +192,68 @@ export function generateBoardHTML(basePath: string = ''): string {
       margin-bottom: 4px;
     }
 
+    .model-badge {
+      display: inline-flex;
+      align-items: center;
+      max-width: 100%;
+      background: rgba(79, 70, 229, 0.14);
+      color: #C7D2FE;
+      border: 1px solid rgba(129, 140, 248, 0.38);
+      border-radius: 9999px;
+      padding: 3px 9px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .model-badge.unavailable {
+      background: rgba(245, 158, 11, 0.14);
+      color: #FCD34D;
+      border-color: rgba(251, 191, 36, 0.38);
+    }
+
+    .field-help {
+      margin-top: 8px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #9CA3AF;
+    }
+
+    .field-help.hidden,
+    .field-warning.hidden,
+    .field-error.hidden,
+    .field-mono.hidden {
+      display: none;
+    }
+
+    .field-warning {
+      margin-top: 8px;
+      border-radius: 8px;
+      border: 1px solid rgba(251, 191, 36, 0.34);
+      background: rgba(245, 158, 11, 0.1);
+      color: #FDE68A;
+      padding: 10px 12px;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .field-error {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #FCA5A5;
+    }
+
+    .field-mono {
+      margin-top: 6px;
+      font-size: 11px;
+      line-height: 1.5;
+      color: #6B7280;
+      font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+      word-break: break-all;
+    }
+
     .btn {
       display: inline-flex;
       align-items: center;
@@ -362,6 +424,50 @@ export function generateBoardHTML(basePath: string = ''): string {
       border-radius: 6px;
       margin: 4px;
     }
+
+    .activity-trail {
+      max-height: 280px;
+      overflow-y: auto;
+      border: 1px solid #374151;
+      border-radius: 8px;
+      background: #111827;
+    }
+
+    .activity-trail::-webkit-scrollbar { width: 4px; }
+    .activity-trail::-webkit-scrollbar-thumb { background: #374151; border-radius: 2px; }
+
+    .activity-entry {
+      padding: 8px 12px;
+      border-bottom: 1px solid #1F2937;
+      font-size: 13px;
+      line-height: 1.5;
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+    .activity-entry:last-child { border-bottom: none; }
+
+    .activity-icon {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      margin-top: 2px;
+    }
+    .activity-icon.created { background: #1E3A5F; color: #60A5FA; }
+    .activity-icon.moved { background: #1E3A5F; color: #60A5FA; }
+    .activity-icon.skill_start { background: #164E3D; color: #34D399; }
+    .activity-icon.skill_complete { background: #14532D; color: #22C55E; }
+    .activity-icon.skill_failed { background: #450A0A; color: #F87171; }
+    .activity-icon.comment { background: #374151; color: #9CA3AF; }
+
+    .activity-text { color: #D1D5DB; flex: 1; }
+    .activity-time { color: #6B7280; font-size: 11px; flex-shrink: 0; white-space: nowrap; }
+    .activity-empty { color: #4B5563; text-align: center; padding: 16px; font-size: 13px; }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100">
@@ -435,14 +541,44 @@ export function generateBoardHTML(basePath: string = ''): string {
         <input id="modal-tags" class="input-field" placeholder="comma-separated tags" />
       </div>
 
+      <div class="field-group">
+        <label class="label">Model</label>
+        <select id="modal-model-select" class="input-field"></select>
+        <div id="modal-model-helper" class="field-help"></div>
+        <div id="modal-model-session-help" class="field-help hidden"></div>
+        <div id="modal-model-warning" class="field-warning hidden"></div>
+        <div id="modal-model-error" class="field-error hidden"></div>
+        <div id="modal-model-ref" class="field-mono hidden"></div>
+      </div>
+
       <div id="modal-skill-section" class="field-group hidden">
         <label class="label">Skill</label>
         <div id="modal-skill-display" class="text-sm text-blue-400 font-mono bg-gray-900 rounded px-3 py-2 inline-block border border-gray-700"></div>
       </div>
 
+      <div class="field-group">
+        <label class="label">OpenClaw Session</label>
+        <div id="modal-session-display" class="text-sm text-gray-300 bg-gray-900 rounded px-3 py-2 border border-gray-700 whitespace-pre-wrap"></div>
+        <div class="flex gap-2 mt-2">
+          <button class="btn btn-secondary" style="padding:8px 12px;" onclick="copySessionResumeCommand()">Copy Resume Command</button>
+        </div>
+      </div>
+
       <div class="flex gap-2 mb-4">
         <button class="btn btn-primary flex-1" onclick="saveCardEdits()">Save Changes</button>
         <button class="btn btn-secondary" onclick="fetchAndShowLog()">View Log</button>
+      </div>
+
+      <!-- Activity Trail -->
+      <div class="field-group">
+        <label class="label">Activity</label>
+        <div id="modal-activity" class="activity-trail"></div>
+        <div class="flex gap-2 mt-2">
+          <input id="activity-comment-input" class="input-field flex-1" placeholder="Add a comment..." onkeydown="if(event.key==='Enter'&&!event.shiftKey)submitComment()" />
+          <button class="btn btn-secondary" style="padding:8px 12px;" onclick="submitComment()">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+          </button>
+        </div>
       </div>
 
       <div id="log-section" class="hidden">
@@ -547,8 +683,116 @@ export function generateBoardHTML(basePath: string = ''): string {
     let dragCardId = null;
     let pollInterval = null;
     let isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 640;
+    let modelCatalog = [];
+    let defaultModelRef = null;
+    let modelCatalogPromise = null;
+    let modelCatalogError = null;
 
     // ─── Rendering ───────────────────────────────────────────────────────────
+
+    async function ensureModelCatalogLoaded(force = false) {
+      if (!force && modelCatalog.length > 0) return modelCatalog;
+      if (!force && modelCatalogPromise) return modelCatalogPromise;
+      modelCatalogPromise = apiFetch('/api/models')
+        .then(data => {
+          modelCatalog = Array.isArray(data?.options) ? data.options : [];
+          defaultModelRef = data?.defaultRef || null;
+          modelCatalogError = null;
+          modelCatalogPromise = null;
+          return modelCatalog;
+        })
+        .catch(err => {
+          modelCatalogError = err.message || 'Failed to load models';
+          modelCatalogPromise = null;
+          throw err;
+        });
+      return modelCatalogPromise;
+    }
+
+    function findModelOption(ref) {
+      if (!ref) return null;
+      const needle = String(ref).trim().toLowerCase();
+      return modelCatalog.find(option => String(option.ref || '').trim().toLowerCase() === needle) || null;
+    }
+
+    function populateModelSelect(card) {
+      const select = document.getElementById('modal-model-select');
+      const currentRef = card?.modelRef || '';
+      const currentOption = findModelOption(currentRef);
+      const options = [
+        '<option value="">Use default model</option>',
+        ...modelCatalog.map(option => 
+          `<option value="${escHtml(option.ref)}" ${option.ref === currentRef ? 'selected' : ''}>${escHtml(option.label)}</option>`
+        ),
+      ];
+      if (currentRef && !currentOption) {
+        options.splice(1, 0, `<option value="${escHtml(currentRef)}" selected>Model unavailable</option>`);
+      }
+      select.innerHTML = options.join('');
+      select.disabled = false;
+    }
+
+    function syncModelField(card) {
+      const select = document.getElementById('modal-model-select');
+      const helper = document.getElementById('modal-model-helper');
+      const sessionHelp = document.getElementById('modal-model-session-help');
+      const warning = document.getElementById('modal-model-warning');
+      const error = document.getElementById('modal-model-error');
+      const ref = document.getElementById('modal-model-ref');
+      const currentRef = card?.modelRef || '';
+      const currentOption = findModelOption(currentRef);
+      const isUnavailable = !!currentRef && !currentOption;
+
+      error.textContent = '';
+      error.classList.add('hidden');
+
+      if (modelCatalog.length > 0) {
+        populateModelSelect(card);
+        select.disabled = false;
+      } else {
+        select.innerHTML = `<option value="">${isUnavailable ? 'Model unavailable' : (currentRef || 'Use default model')}</option>`;
+        select.disabled = true;
+      }
+
+      if (!currentRef) {
+        helper.textContent = 'Uses the agent default unless you choose a specific model.';
+        sessionHelp.textContent = '';
+        sessionHelp.classList.add('hidden');
+        warning.textContent = '';
+        warning.classList.add('hidden');
+        ref.textContent = '';
+        ref.classList.add('hidden');
+      } else if (isUnavailable) {
+        helper.textContent = '';
+        sessionHelp.textContent = '';
+        sessionHelp.classList.add('hidden');
+        warning.innerHTML = '⚠ Saved model is no longer configured on this gateway.<br>Choose another model or clear back to default.';
+        warning.classList.remove('hidden');
+        ref.textContent = 'Canonical ref: ' + currentRef;
+        ref.classList.remove('hidden');
+      } else {
+        helper.textContent = 'Applies to future stage runs on this card’s durable thread. History stays intact.';
+        warning.textContent = '';
+        warning.classList.add('hidden');
+        ref.textContent = 'Canonical ref: ' + currentRef;
+        ref.classList.remove('hidden');
+        if (card.sessionId) {
+          sessionHelp.textContent = 'Updates the bound session for future runs.';
+          sessionHelp.classList.remove('hidden');
+        } else {
+          sessionHelp.textContent = '';
+          sessionHelp.classList.add('hidden');
+        }
+      }
+
+      if (modelCatalogError) {
+        helper.textContent = 'Model list unavailable right now. Try again in a moment.';
+        if (currentRef) {
+          ref.textContent = 'Canonical ref: ' + currentRef;
+          ref.classList.remove('hidden');
+        }
+      }
+    }
 
     function renderBoard(state) {
       const board = document.getElementById('board');
@@ -612,27 +856,34 @@ export function generateBoardHTML(basePath: string = ''): string {
     function renderCard(card) {
       const status = card.status || 'idle';
       const color = STATUS_COLORS[status] || STATUS_COLORS.idle;
-      const label = STATUS_LABELS[status] || status;
       const tags = (card.tags || []);
       const tagsHtml = tags.length > 0
-        ? \`<div class="flex flex-wrap mt-2">\${tags.map(t => \`<span class="tag-badge">\${escHtml(t)}</span>\`).join('')}</div>\`
+        ? `<div class="flex flex-wrap mt-2">${tags.map(t => `<span class="tag-badge">${escHtml(t)}</span>`).join('')}</div>`
+        : '';
+      const modelBadgeHtml = card.modelBadgeLabel
+        ? `<div class="mt-2"><span class="model-badge${card.modelState === 'unavailable' ? ' unavailable' : ''}">${escHtml(card.modelBadgeLabel)}</span></div>`
         : '';
       const runningClass = status === 'running' ? ' running' : '';
+      const sessionHtml = card.sessionId
+        ? `<div class="text-xs text-gray-500 mt-2">OpenClaw · ${escHtml(String(card.sessionId).slice(0, 8))}</div>`
+        : '';
 
-      return \`
+      return `
         <div class="card"
-          data-card-id="\${escHtml(card.id)}"
-          \${!isMobile ? 'draggable="true"' : ''}
-          onclick="openCardModal('\${escHtml(card.id)}')"
+          data-card-id="${escHtml(card.id)}"
+          ${!isMobile ? 'draggable="true"' : ''}
+          onclick="openCardModal('${escHtml(card.id)}')"
         >
           <div class="flex items-start gap-2">
-            <span class="status-dot\${runningClass}" style="background:\${color};margin-top:5px;flex-shrink:0;"></span>
-            <span class="text-sm font-medium text-gray-100 leading-snug flex-1">\${escHtml(card.title || 'Untitled')}</span>
+            <span class="status-dot${runningClass}" style="background:${color};margin-top:5px;flex-shrink:0;"></span>
+            <span class="text-sm font-medium text-gray-100 leading-snug flex-1">${escHtml(card.title || 'Untitled')}</span>
           </div>
-          \${tagsHtml}
-          \${card.skill ? \`<div class="text-xs text-blue-400 font-mono mt-2 truncate">\${escHtml(card.skill)}</div>\` : ''}
+          ${tagsHtml}
+          ${modelBadgeHtml}
+          ${card.skillTriggered ? `<div class="text-xs text-blue-400 font-mono mt-2 truncate">${escHtml(card.skillTriggered)}</div>` : ''}
+          ${sessionHtml}
         </div>
-      \`;
+      `;
     }
 
     // ─── Drag and Drop ───────────────────────────────────────────────────────
@@ -687,14 +938,8 @@ export function generateBoardHTML(basePath: string = ''): string {
       return card ? (card.column || 'backlog') : 'backlog';
     }
 
-    function openCardModal(cardId) {
-      const card = findCard(cardId);
+    function refreshModalReadOnlyFields(card) {
       if (!card) return;
-      currentCardId = cardId;
-
-      document.getElementById('modal-title').value = card.title || '';
-      document.getElementById('modal-description').value = card.description || '';
-      document.getElementById('modal-tags').value = (card.tags || []).join(', ');
 
       // Status display
       const status = card.status || 'idle';
@@ -713,18 +958,68 @@ export function generateBoardHTML(basePath: string = ''): string {
       // Skill
       const skillSection = document.getElementById('modal-skill-section');
       const skillDisplay = document.getElementById('modal-skill-display');
-      if (card.skill) {
-        skillDisplay.textContent = card.skill;
+      if (card.skillTriggered) {
+        skillDisplay.textContent = card.skillTriggered;
         skillSection.classList.remove('hidden');
       } else {
         skillSection.classList.add('hidden');
       }
+
+      // Model field
+      syncModelField(card);
+
+      // Durable session info
+      const sessionDisplay = document.getElementById('modal-session-display');
+      if (card.sessionId) {
+        const lines = [
+          'Durable card thread is linked.',
+          'sessionId: ' + card.sessionId,
+          card.sessionKey ? 'sessionKey: ' + card.sessionKey : null,
+          card.sessionFile ? 'transcript: ' + card.sessionFile : null,
+        ].filter(Boolean);
+        sessionDisplay.textContent = lines.join('\\n');
+      } else {
+        sessionDisplay.textContent = 'No OpenClaw session yet. The first move into a skill-backed stage creates and binds a durable work thread for this card.';
+      }
+
+      // Activity trail
+      renderActivityTrail(card.activity || []);
+    }
+
+    function syncOpenCardModal() {
+      const modal = document.getElementById('card-modal');
+      if (!currentCardId || modal.classList.contains('hidden')) return;
+      const card = findCard(currentCardId);
+      if (!card) return;
+      refreshModalReadOnlyFields(card);
+    }
+
+    function openCardModal(cardId) {
+      const card = findCard(cardId);
+      if (!card) return;
+      currentCardId = cardId;
+
+      document.getElementById('modal-title').value = card.title || '';
+      document.getElementById('modal-description').value = card.description || '';
+      document.getElementById('modal-tags').value = (card.tags || []).join(', ');
+      modelCatalogError = null;
+      refreshModalReadOnlyFields(card);
+      document.getElementById('activity-comment-input').value = '';
 
       // Reset log
       document.getElementById('log-section').classList.add('hidden');
       document.getElementById('log-content').textContent = '';
 
       document.getElementById('card-modal').classList.remove('hidden');
+      ensureModelCatalogLoaded()
+        .then(() => {
+          const liveCard = findCard(cardId) || card;
+          syncModelField(liveCard);
+        })
+        .catch(() => {
+          const liveCard = findCard(cardId) || card;
+          syncModelField(liveCard);
+        });
     }
 
     function closeCardModal() {
@@ -785,6 +1080,85 @@ export function generateBoardHTML(basePath: string = ''): string {
       }
     }
 
+    async function copySessionResumeCommand() {
+      if (!currentCardId) return;
+      const card = findCard(currentCardId);
+      if (!card || !card.sessionId) {
+        alert('This card does not have a durable session yet. Move it into a skill-backed stage first.');
+        return;
+      }
+      const command = \`openclaw agent --session-id \${card.sessionId} --message "Continue where you left off."\`;
+      try {
+        await navigator.clipboard.writeText(command);
+      } catch {
+        prompt('Copy resume command:', command);
+      }
+    }
+
+    // ─── Activity Trail ──────────────────────────────────────────────────────
+
+    const ACTIVITY_ICONS = {
+      created: '✦',
+      moved: '→',
+      skill_start: '▶',
+      skill_complete: '✓',
+      skill_failed: '✗',
+      comment: '💬',
+    };
+
+    function formatActivityTime(iso) {
+      try {
+        const d = new Date(iso);
+        const now = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        const time = pad(d.getHours()) + ':' + pad(d.getMinutes());
+        const month = d.toLocaleString('en-US', { month: 'short' });
+        const day = d.getDate();
+        const year = d.getFullYear();
+        // Show date if not today
+        if (d.toDateString() !== now.toDateString()) {
+          return month + ' ' + day + (year !== now.getFullYear() ? ', ' + year : '') + ' ' + time;
+        }
+        return time;
+      } catch { return ''; }
+    }
+
+    function renderActivityTrail(activity) {
+      const container = document.getElementById('modal-activity');
+      if (!activity || activity.length === 0) {
+        container.innerHTML = '<div class="activity-empty">No activity yet</div>';
+        return;
+      }
+      // Show newest first
+      const sorted = [...activity].reverse();
+      container.innerHTML = sorted.map(entry => {
+        const icon = ACTIVITY_ICONS[entry.type] || '•';
+        const iconClass = entry.type || 'comment';
+        return \`<div class="activity-entry">
+          <div class="activity-icon \${iconClass}">\${icon}</div>
+          <div class="activity-text">\${escHtml(entry.text)}</div>
+          <div class="activity-time">\${formatActivityTime(entry.timestamp)}</div>
+        </div>\`;
+      }).join('');
+    }
+
+    async function submitComment() {
+      if (!currentCardId) return;
+      const input = document.getElementById('activity-comment-input');
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      try {
+        const activity = await apiFetch(\`/api/cards/\${currentCardId}/activity\`, {
+          method: 'POST',
+          body: JSON.stringify({ type: 'comment', text }),
+        });
+        renderActivityTrail(activity);
+      } catch (err) {
+        alert('Failed to add comment: ' + err.message);
+      }
+    }
+
     // ─── Add Card Modal ───────────────────────────────────────────────────────
 
     function openAddModal() {
@@ -841,7 +1215,9 @@ export function generateBoardHTML(basePath: string = ''): string {
         const lines = [
           \`v\${info.version} · \${info.runtime}\`,
           \`Up \${uptime} · \${info.cards} card\${info.cards !== 1 ? 's' : ''}\`,
-          info.webhookConfigured ? 'Webhook connected' : 'Webhook not configured',
+          info.executionMode === 'durable-openclaw-session'
+            ? 'Durable OpenClaw sessions enabled'
+            : 'Execution mode unavailable',
         ];
         el.innerHTML = lines.map(l => \`<div>\${l}</div>\`).join('');
       } catch {}
@@ -917,6 +1293,7 @@ export function generateBoardHTML(basePath: string = ''): string {
           lastStateJSON = stateJSON;
           boardState = state;
           renderBoard(state);
+          syncOpenCardModal();
         }
         setPollIndicator(true);
         // Fetch header info once on first successful load
