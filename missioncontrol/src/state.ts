@@ -85,6 +85,16 @@ export interface ActivityEntry {
   reason?: string;
 }
 
+export interface CardAttachment {
+  id: string;
+  originalName: string;
+  storedName: string;
+  mimeType: string;
+  sizeBytes: number;
+  uploadedAt: string;
+  lastUsedAt: string | null;
+}
+
 export interface Card {
   id: string;
   title: string;
@@ -97,6 +107,7 @@ export interface Card {
   logFile: string | null;
   designDocs: string[];
   tags: string[];
+  attachments: CardAttachment[];
   modelRef: string | null;
   lastViewedAt: string | null;
   attentionMode: AttentionMode;
@@ -241,6 +252,26 @@ function normalizeActivityEntry(raw: any): ActivityEntry {
   } as ActivityEntry;
 }
 
+function normalizeAttachment(raw: any): CardAttachment | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const originalName = typeof raw.originalName === 'string' && raw.originalName.trim() ? raw.originalName.trim() : null;
+  const storedName = typeof raw.storedName === 'string' && raw.storedName.trim() ? raw.storedName.trim() : null;
+  const mimeType = typeof raw.mimeType === 'string' && raw.mimeType.trim() ? raw.mimeType.trim() : null;
+  const sizeBytes = typeof raw.sizeBytes === 'number' && Number.isFinite(raw.sizeBytes) && raw.sizeBytes >= 0
+    ? raw.sizeBytes
+    : null;
+  if (!originalName || !storedName || !mimeType || sizeBytes == null) return null;
+  return {
+    id: typeof raw.id === 'string' && raw.id ? raw.id : crypto.randomUUID(),
+    originalName,
+    storedName,
+    mimeType,
+    sizeBytes,
+    uploadedAt: typeof raw.uploadedAt === 'string' && raw.uploadedAt ? raw.uploadedAt : new Date().toISOString(),
+    lastUsedAt: typeof raw.lastUsedAt === 'string' && raw.lastUsedAt ? raw.lastUsedAt : null,
+  };
+}
+
 function normalizeCard(raw: any): Card {
   const now = new Date().toISOString();
   const column = COLUMNS.some((col) => col.id === raw?.column) ? raw.column : 'backlog';
@@ -262,6 +293,7 @@ function normalizeCard(raw: any): Card {
     logFile: typeof raw?.logFile === 'string' && raw.logFile ? raw.logFile : null,
     designDocs: Array.isArray(raw?.designDocs) ? raw.designDocs.map(String) : [],
     tags: Array.isArray(raw?.tags) ? raw.tags.map(String) : [],
+    attachments: Array.isArray(raw?.attachments) ? raw.attachments.map(normalizeAttachment).filter(Boolean) as CardAttachment[] : [],
     modelRef: typeof raw?.modelRef === 'string' && raw.modelRef.trim() ? raw.modelRef.trim() : null,
     lastViewedAt: typeof raw?.lastViewedAt === 'string' && raw.lastViewedAt ? raw.lastViewedAt : null,
     attentionMode,
@@ -365,6 +397,7 @@ export function createCard(
     logFile: null,
     designDocs: [],
     tags,
+    attachments: [],
     modelRef: null,
     lastViewedAt: null,
     attentionMode: 'none',
@@ -388,13 +421,19 @@ export function createCard(
 /**
  * Move a card to a target column. If the column has an associated skill,
  * sets status to "pending", records the skill, and creates a log file path.
- * Returns the updated card and the skill name (or null).
+ * Same-column moves are true no-ops.
  */
+export interface MoveCardResult {
+  card: Card;
+  skill: string | null;
+  changed: boolean;
+}
+
 export function moveCard(
   config: MCConfig,
   cardId: string,
   targetColumn: ColumnId,
-): { card: Card; skill: string | null } {
+): MoveCardResult {
   const state = loadState(config);
   const idx = state.cards.findIndex((c) => c.id === cardId);
   if (idx === -1) {
@@ -409,6 +448,14 @@ export function moveCard(
   const skill = columnDef.skill ?? null;
   const now = new Date().toISOString();
   const card = state.cards[idx];
+
+  if (card.column === targetColumn) {
+    return {
+      card,
+      skill: null,
+      changed: false,
+    };
+  }
 
   const fromColumn = card.column;
   const previousStatus = card.status;
@@ -443,7 +490,7 @@ export function moveCard(
 
   saveState(config, state);
 
-  return { card, skill };
+  return { card, skill, changed: true };
 }
 
 /**
@@ -458,6 +505,7 @@ export function updateCard(
       | 'title'
       | 'description'
       | 'tags'
+      | 'attachments'
       | 'modelRef'
       | 'status'
       | 'logFile'

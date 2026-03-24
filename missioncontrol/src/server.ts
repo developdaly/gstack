@@ -28,6 +28,7 @@ import {
   type ActivityActor,
   type AttentionMode,
   type Card,
+  type CardAttachment,
 } from './state';
 import { generateBoardHTML } from './ui';
 import { stripBasePath } from './base-path';
@@ -97,6 +98,83 @@ let modelOptionsCache:
       defaultRef: string;
     }
   | null = null;
+
+const MAX_ATTACHMENT_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_ATTACHMENTS_PER_CARD = 20;
+const MAX_TOTAL_ATTACHMENT_SIZE_BYTES = 50 * 1024 * 1024;
+
+function getCardUploadsDir(cardId: string): string {
+  return path.join(config.uploadsDir, cardId);
+}
+
+function getAttachmentDiskPath(cardId: string, attachment: Pick<CardAttachment, 'storedName'>): string {
+  return path.join(getCardUploadsDir(cardId), attachment.storedName);
+}
+
+function sumAttachmentBytes(attachments: CardAttachment[]): number {
+  return attachments.reduce((sum, attachment) => sum + (attachment.sizeBytes || 0), 0);
+}
+
+export function sanitizeAttachmentName(originalName: string): string {
+  const trimmed = String(originalName || '').trim();
+  const base = path.basename(trimmed || 'upload');
+  const ext = path.extname(base).replace(/[^a-zA-Z0-9.]/g, '').slice(0, 20);
+  const stem = (ext ? base.slice(0, -ext.length) : base)
+    .replace(/[^a-zA-Z0-9._-]+/g, '_')
+    .replace(/^[_\. -]+|[_\. -]+$/g, '')
+    .slice(0, 180) || 'upload';
+  return `${stem}${ext}`.slice(0, 200);
+}
+
+export function detectImageMime(bytes: Uint8Array, originalName: string = ''): string | null {
+  if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47 && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a) {
+    return 'image/png';
+  }
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return 'image/jpeg';
+  }
+  if (bytes.length >= 4 && bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) {
+    return 'image/gif';
+  }
+  if (bytes.length >= 12 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) {
+    return 'image/webp';
+  }
+
+  const sample = Buffer.from(bytes.slice(0, 2048)).toString('utf-8').trimStart();
+  const sampleLower = sample.toLowerCase();
+  if (sampleLower.startsWith('<svg') || sampleLower.startsWith('<?xml') || sampleLower.includes('<svg')) {
+    const ext = path.extname(originalName).toLowerCase();
+    if (!ext || ext === '.svg') return 'image/svg+xml';
+  }
+
+  return null;
+}
+
+function safeRemoveCardUploadsDir(cardId: string): void {
+  const resolvedRoot = path.resolve(config.uploadsDir);
+  const targetDir = path.resolve(getCardUploadsDir(cardId));
+  if (!targetDir.startsWith(resolvedRoot + path.sep) && targetDir !== resolvedRoot) {
+    throw new Error('Refusing to remove uploads outside missioncontrol-uploads root');
+  }
+  fs.rmSync(targetDir, { recursive: true, force: true });
+}
+
+function markAttachmentsUsed(card: Card, usedAt: string): Card {
+  if (!Array.isArray(card.attachments) || card.attachments.length === 0) return card;
+  const nextAttachments = card.attachments.map((attachment) => ({
+    ...attachment,
+    lastUsedAt: usedAt,
+  }));
+  return updateCard(config, card.id, { attachments: nextAttachments });
+}
+
+function findAttachment(card: Card, attachmentId: string): CardAttachment | null {
+  return (card.attachments || []).find((attachment) => attachment.id === attachmentId) || null;
+}
+
+function normalizeCardForResponse(card: Card, modelIndex?: Map<string, ModelOption>): CardView {
+  return decorateCard(card, modelIndex);
+}
 
 function formatProviderLabel(provider: string): string {
   const normalized = provider.trim().toLowerCase();
@@ -362,7 +440,7 @@ async function pipeStreamToLog(
   }
 }
 
-function buildStagePrompt(params: {
+export function buildStagePrompt(params: {
   card: Card;
   skill: string;
   columnName: string;
@@ -382,6 +460,14 @@ function buildStagePrompt(params: {
 
   if (card.description?.trim()) {
     lines.push(`Card description:\n${card.description.trim()}`);
+  }
+
+  if ((card.attachments || []).length > 0) {
+    const attachmentLines = (card.attachments || []).map((attachment) => {
+      const attachmentPath = getAttachmentDiskPath(card.id, attachment);
+      return `[media attached: ${attachmentPath} (${attachment.mimeType})]`;
+    });
+    lines.push(`Card attachments (images the agent can see):\n${attachmentLines.join('\n')}`);
   }
 
   if ((card.tags || []).length > 0) {
@@ -534,6 +620,7 @@ async function startCardSessionRun(params: {
   const firstTurn = !params.card.sessionId;
   let card = await ensureCardSession(config, params.card);
   await applyCardModelToSession(card);
+  card = markAttachmentsUsed(card, new Date().toISOString());
   const columnName = getColumnName(card.column);
   const logFile =
     card.logFile || path.join(config.logsDir, `${card.id}-${new Date().toISOString().replace(/[:.]/g, '-')}.log`);
@@ -706,7 +793,7 @@ function createLogStream(logFilePath: string): Response {
 }
 
 // ─── API Handler ────────────────────────────────────────────────
-async function handleApiRoute(url: URL, req: Request, config: MCConfig): Promise<Response> {
+export async function handleApiRoute(url: URL, req: Request, config: MCConfig): Promise<Response> {
   // GET /api/state — return columns + cards
   if (url.pathname === '/api/state' && req.method === 'GET') {
     const state = loadState(config);
@@ -743,15 +830,132 @@ async function handleApiRoute(url: URL, req: Request, config: MCConfig): Promise
     return Response.json(card, { status: 201 });
   }
 
+  // POST /api/cards/:id/upload — upload a single image attachment
+  const uploadMatch = url.pathname.match(/^\/api\/cards\/([^/]+)\/upload$/);
+  if (uploadMatch && req.method === 'POST') {
+    const cardId = uploadMatch[1];
+    const existing = getCard(config, cardId);
+    if (!existing) return Response.json({ error: 'Card not found' }, { status: 404 });
+
+    const form = await req.formData();
+    const files = Array.from(form.values()).filter((value): value is File => value instanceof File && value.size > 0);
+    if (files.length !== 1) {
+      return Response.json({ error: 'Exactly one file is required per upload request' }, { status: 400 });
+    }
+
+    const file = files[0];
+    if (file.size > MAX_ATTACHMENT_SIZE_BYTES) {
+      return Response.json({ error: 'File exceeds 10 MB limit' }, { status: 400 });
+    }
+    if ((existing.attachments || []).length >= MAX_ATTACHMENTS_PER_CARD) {
+      return Response.json({ error: 'Attachment limit reached (20 max)' }, { status: 400 });
+    }
+    if (sumAttachmentBytes(existing.attachments || []) + file.size > MAX_TOTAL_ATTACHMENT_SIZE_BYTES) {
+      return Response.json({ error: 'Total attachment size limit reached (50 MB max)' }, { status: 400 });
+    }
+
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const detectedMime = detectImageMime(bytes, file.name);
+    if (!detectedMime) {
+      return Response.json({ error: 'Only image uploads are supported in v1 (png, jpg, gif, webp, svg)' }, { status: 400 });
+    }
+
+    const attachmentId = crypto.randomUUID();
+    const safeName = sanitizeAttachmentName(file.name || 'upload');
+    const storedName = `${attachmentId}-${safeName}`;
+    const uploadDir = getCardUploadsDir(cardId);
+    const diskPath = path.join(uploadDir, storedName);
+
+    try {
+      fs.mkdirSync(uploadDir, { recursive: true });
+      Bun.write(diskPath, bytes);
+    } catch (err: any) {
+      const status = err?.code === 'ENOSPC' ? 507 : 500;
+      return Response.json({ error: err?.code === 'ENOSPC' ? 'Disk is full — unable to store upload' : `Failed to store upload: ${err.message}` }, { status });
+    }
+
+    const attachment: CardAttachment = {
+      id: attachmentId,
+      originalName: file.name || safeName,
+      storedName,
+      mimeType: detectedMime,
+      sizeBytes: file.size,
+      uploadedAt: new Date().toISOString(),
+      lastUsedAt: null,
+    };
+
+    const card = updateCard(config, cardId, {
+      attachments: [...(existing.attachments || []), attachment],
+    });
+
+    return Response.json({ card, attachment }, { status: 201 });
+  }
+
+  // GET /api/cards/:id/attachments/:attachmentId — serve an uploaded attachment
+  const attachmentGetMatch = url.pathname.match(/^\/api\/cards\/([^/]+)\/attachments\/([^/]+)$/);
+  if (attachmentGetMatch && req.method === 'GET') {
+    const cardId = attachmentGetMatch[1];
+    const attachmentId = attachmentGetMatch[2];
+    const card = getCard(config, cardId);
+    if (!card) return Response.json({ error: 'Card not found' }, { status: 404 });
+    const attachment = findAttachment(card, attachmentId);
+    if (!attachment) return Response.json({ error: 'Attachment not found' }, { status: 404 });
+    const diskPath = getAttachmentDiskPath(cardId, attachment);
+    try {
+      const file = Bun.file(diskPath);
+      if (!(await file.exists())) {
+        return Response.json({ error: 'Attachment file not found' }, { status: 404 });
+      }
+      return new Response(file, {
+        headers: {
+          'Content-Type': attachment.mimeType,
+          'Cache-Control': 'private, max-age=60',
+        },
+      });
+    } catch {
+      return Response.json({ error: 'Attachment file not found' }, { status: 404 });
+    }
+  }
+
+  // DELETE /api/cards/:id/attachments/:attachmentId — remove a single attachment
+  const attachmentDeleteMatch = url.pathname.match(/^\/api\/cards\/([^/]+)\/attachments\/([^/]+)$/);
+  if (attachmentDeleteMatch && req.method === 'DELETE') {
+    const cardId = attachmentDeleteMatch[1];
+    const attachmentId = attachmentDeleteMatch[2];
+    const card = getCard(config, cardId);
+    if (!card) return Response.json({ error: 'Card not found' }, { status: 404 });
+    const attachment = findAttachment(card, attachmentId);
+    if (!attachment) return Response.json({ error: 'Attachment not found' }, { status: 404 });
+
+    try {
+      fs.rmSync(getAttachmentDiskPath(cardId, attachment), { force: true });
+    } catch {}
+
+    const nextAttachments = (card.attachments || []).filter((entry) => entry.id !== attachmentId);
+    const updatedCard = updateCard(config, cardId, { attachments: nextAttachments });
+    return Response.json({ card: updatedCard, deletedId: attachmentId });
+  }
+
   // POST /api/cards/:id/move — move card to column
   const moveMatch = url.pathname.match(/^\/api\/cards\/([^/]+)\/move$/);
   if (moveMatch && req.method === 'POST') {
     const cardId = moveMatch[1];
     const body = await req.json();
     try {
+      const currentCard = getCard(config, cardId);
+      if (!currentCard) {
+        return Response.json({ error: 'Card not found' }, { status: 404 });
+      }
+      if (!COLUMNS.some((column) => column.id === body.column)) {
+        return Response.json({ error: `Unknown column: ${body.column}` }, { status: 404 });
+      }
+      if (currentCard.column === body.column) {
+        return Response.json({ card: currentCard, skill: null, changed: false });
+      }
+
       cancelActiveRun(cardId, `card moved to ${getColumnName(body.column)}`);
       const result = moveCard(config, cardId, body.column);
-      if (result.skill) {
+      if (result.changed && result.skill) {
         startCardSessionRun({
           config,
           card: result.card,
