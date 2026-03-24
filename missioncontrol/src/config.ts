@@ -19,6 +19,7 @@ export interface MCConfig {
   serverStateFile: string;  // .gstack/missioncontrol-server.json (pid, port, token)
   boardStateFile: string;   // .gstack/missioncontrol.json (cards)
   logsDir: string;          // .gstack/missioncontrol-logs/
+  uploadsDir: string;       // .gstack/missioncontrol-uploads/
 }
 
 /**
@@ -68,6 +69,7 @@ export function resolveConfig(
     serverStateFile,
     boardStateFile: path.join(stateDir, 'missioncontrol.json'),
     logsDir: path.join(stateDir, 'missioncontrol-logs/'),
+    uploadsDir: path.join(stateDir, 'missioncontrol-uploads/'),
   };
 }
 
@@ -96,6 +98,18 @@ export function ensureStateDir(config: MCConfig): void {
     }
     if (err.code === 'ENOTDIR') {
       throw new Error(`Cannot create logs directory ${config.logsDir}: a file exists at that path`);
+    }
+    throw err;
+  }
+
+  try {
+    fs.mkdirSync(config.uploadsDir, { recursive: true });
+  } catch (err: any) {
+    if (err.code === 'EACCES') {
+      throw new Error(`Cannot create uploads directory ${config.uploadsDir}: permission denied`);
+    }
+    if (err.code === 'ENOTDIR') {
+      throw new Error(`Cannot create uploads directory ${config.uploadsDir}: a file exists at that path`);
     }
     throw err;
   }
