@@ -622,6 +622,216 @@ export function generateBoardHTML(basePath: string = ''): string {
       margin-bottom: 16px;
     }
 
+    .attachment-empty {
+      border: 1px dashed #374151;
+      border-radius: 10px;
+      background: rgba(17, 24, 39, 0.45);
+      color: #D1D5DB;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .attachment-empty.hidden {
+      display: none;
+    }
+
+    .attachment-empty-title {
+      color: #F3F4F6;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .attachment-empty-meta {
+      color: #9CA3AF;
+      font-size: 12px;
+      margin-top: 6px;
+    }
+
+    .attachment-strip {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      margin-bottom: 10px;
+    }
+
+    .attachment-strip:empty {
+      display: none;
+    }
+
+    .attachment-strip::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    .attachment-strip::-webkit-scrollbar-thumb {
+      background: #374151;
+      border-radius: 999px;
+    }
+
+    .attachment-card {
+      flex: 0 0 auto;
+      width: 92px;
+      position: relative;
+    }
+
+    .attachment-thumb {
+      width: 72px;
+      height: 72px;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #111827;
+      border: 1px solid #374151;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .attachment-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .attachment-fallback {
+      display: none;
+      width: 100%;
+      height: 100%;
+      padding: 8px;
+      font-size: 11px;
+      line-height: 1.4;
+      color: #FBBF24;
+      text-align: center;
+      align-items: center;
+      justify-content: center;
+      background: rgba(245, 158, 11, 0.08);
+    }
+
+    .attachment-status {
+      margin-top: 6px;
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 2px 7px;
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid transparent;
+    }
+
+    .attachment-status--queued {
+      background: rgba(59, 130, 246, 0.12);
+      color: #BFDBFE;
+      border-color: rgba(96, 165, 250, 0.28);
+    }
+
+    .attachment-status--used {
+      background: rgba(16, 185, 129, 0.12);
+      color: #A7F3D0;
+      border-color: rgba(52, 211, 153, 0.28);
+    }
+
+    .attachment-name {
+      margin-top: 4px;
+      font-size: 11px;
+      line-height: 1.4;
+      color: #9CA3AF;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      width: 84px;
+    }
+
+    .attachment-remove {
+      position: absolute;
+      top: -6px;
+      right: 6px;
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      background: rgba(17, 24, 39, 0.95);
+      border: 1px solid #4B5563;
+      color: #F3F4F6;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .attachment-dropzone {
+      border: 1px dashed #4B5563;
+      border-radius: 10px;
+      background: rgba(17, 24, 39, 0.55);
+      color: #D1D5DB;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .attachment-dropzone:hover,
+    .attachment-dropzone.drag-active {
+      border-color: #60A5FA;
+      background: rgba(30, 41, 59, 0.92);
+    }
+
+    .attachment-dropzone.is-disabled {
+      opacity: 0.65;
+      cursor: progress;
+    }
+
+    .attachment-dropzone-title {
+      color: #F9FAFB;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .attachment-dropzone-meta {
+      color: #9CA3AF;
+      font-size: 12px;
+    }
+
+    .card-attachment-indicator {
+      margin-top: 8px;
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      background: rgba(59, 130, 246, 0.12);
+      color: #BFDBFE;
+      border: 1px solid rgba(96, 165, 250, 0.24);
+    }
+
+    .attachment-preview-panel {
+      position: relative;
+      max-width: min(90vw, 960px);
+      max-height: 88vh;
+      padding: 16px;
+      border-radius: 14px;
+      background: #111827;
+      border: 1px solid #374151;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+    }
+
+    .attachment-preview-image {
+      max-width: 100%;
+      max-height: calc(88vh - 32px);
+      display: block;
+      border-radius: 10px;
+      margin: 0 auto;
+    }
+
+    .attachment-preview-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 2;
+    }
+
     #login-page {
       position: fixed;
       inset: 0;
@@ -893,6 +1103,27 @@ export function generateBoardHTML(basePath: string = ''): string {
         <textarea id="modal-description" class="input-field" placeholder="Add a description..." style="resize:vertical;min-height:80px;font-family:inherit;font-size:14px;"></textarea>
       </div>
 
+      <div id="modal-attachments-group" class="field-group">
+        <label class="label">Images for agent context</label>
+        <div class="field-help" style="margin-top:0;">Included when this card runs.</div>
+        <div id="modal-attachments-empty" class="attachment-empty hidden">
+          <div class="attachment-empty-title">No images yet</div>
+          <div>Add screenshots or mockups the agent should see in the next run.</div>
+          <div class="attachment-empty-meta">PNG, JPG, GIF, WebP, SVG · up to 10 MB each · 20 max</div>
+        </div>
+        <div id="modal-attachments-strip" class="attachment-strip"></div>
+        <div id="modal-attachments-dropzone" class="attachment-dropzone"
+          onclick="openAttachmentPicker()"
+          ondragover="handleAttachmentDragOver(event)"
+          ondragleave="handleAttachmentDragLeave(event)"
+          ondrop="handleAttachmentDrop(event)">
+          <div class="attachment-dropzone-title">+ Add images</div>
+          <div class="attachment-dropzone-meta">Drop or click · PNG, JPG, GIF, WebP, SVG</div>
+        </div>
+        <input id="modal-attachments-input" type="file" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,image/svg+xml,.svg" multiple class="hidden" onchange="handleAttachmentInputChange(event)" />
+        <div id="modal-attachments-error" class="field-error hidden"></div>
+      </div>
+
       <div class="field-group">
         <label class="label">Tags</label>
         <input id="modal-tags" class="input-field" placeholder="comma-separated tags" />
@@ -959,6 +1190,17 @@ export function generateBoardHTML(basePath: string = ''): string {
         <label class="label mb-2">Execution Log</label>
         <pre id="log-content" class="log-viewer">Loading...</pre>
       </div>
+    </div>
+  </div>
+
+  <div id="attachment-preview-modal" class="modal-overlay hidden" onclick="closeAttachmentPreview()">
+    <div class="attachment-preview-panel" onclick="event.stopPropagation()">
+      <button class="btn btn-ghost attachment-preview-close" onclick="closeAttachmentPreview()">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+      <img id="attachment-preview-image" class="attachment-preview-image" alt="Attachment preview" />
     </div>
   </div>
 
@@ -1050,6 +1292,185 @@ export function generateBoardHTML(basePath: string = ''): string {
     let modelCatalogPromise = null;
     let modelCatalogError = null;
     let readMarkInFlightForCardId = null;
+    let attachmentUploadInFlight = false;
+
+    function attachmentState(card, attachment) {
+      if (attachment && attachment.lastUsedAt) return 'used';
+      return 'queued';
+    }
+
+    function attachmentLabel(card, attachment) {
+      return attachmentState(card, attachment) === 'used' ? 'Used' : 'Queued';
+    }
+
+    function cardAttachmentSummary(card) {
+      const attachments = Array.isArray(card && card.attachments) ? card.attachments : [];
+      if (!attachments.length) return null;
+      const queuedCount = attachments.filter(att => !att.lastUsedAt).length;
+      const usedCount = attachments.filter(att => !!att.lastUsedAt).length;
+      if (queuedCount > 0) {
+        return {
+          label: '📎 ' + queuedCount + ' queued',
+          title: queuedCount === 1 ? '1 image queued for the next run' : queuedCount + ' images queued for the next run',
+        };
+      }
+      if (usedCount > 0) {
+        return {
+          label: '📎 ' + usedCount + ' used',
+          title: usedCount === 1 ? '1 image included in the last run' : usedCount + ' images included in the last run',
+        };
+      }
+      return {
+        label: '📎 ' + attachments.length + ' attached',
+        title: attachments.length === 1 ? '1 image attached' : attachments.length + ' images attached',
+      };
+    }
+
+    function attachmentUrl(cardId, attachmentId) {
+      return BASE_PATH + '/api/cards/' + encodeURIComponent(cardId) + '/attachments/' + encodeURIComponent(attachmentId);
+    }
+
+    function clearAttachmentError() {
+      const error = document.getElementById('modal-attachments-error');
+      if (!error) return;
+      error.textContent = '';
+      error.classList.add('hidden');
+    }
+
+    function showAttachmentError(message) {
+      const error = document.getElementById('modal-attachments-error');
+      if (!error) return;
+      error.textContent = message || 'Attachment action failed.';
+      error.classList.remove('hidden');
+    }
+
+    function openAttachmentPicker() {
+      const input = document.getElementById('modal-attachments-input');
+      if (input && !attachmentUploadInFlight) input.click();
+    }
+
+    function handleAttachmentPreviewError(imgEl) {
+      if (!imgEl) return;
+      imgEl.style.display = 'none';
+      const fallback = imgEl.parentElement && imgEl.parentElement.querySelector('.attachment-fallback');
+      if (fallback) fallback.style.display = 'flex';
+    }
+
+    function openAttachmentPreview(attachmentId) {
+      if (!currentCardId) return;
+      const modal = document.getElementById('attachment-preview-modal');
+      const image = document.getElementById('attachment-preview-image');
+      if (!modal || !image) return;
+      image.src = attachmentUrl(currentCardId, attachmentId);
+      modal.classList.remove('hidden');
+    }
+
+    function closeAttachmentPreview() {
+      const modal = document.getElementById('attachment-preview-modal');
+      const image = document.getElementById('attachment-preview-image');
+      if (image) image.src = '';
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function renderAttachmentSection(card) {
+      const attachments = Array.isArray(card && card.attachments) ? card.attachments : [];
+      const strip = document.getElementById('modal-attachments-strip');
+      const empty = document.getElementById('modal-attachments-empty');
+      const dropzone = document.getElementById('modal-attachments-dropzone');
+      const input = document.getElementById('modal-attachments-input');
+      if (!strip || !empty || !dropzone || !input) return;
+
+      strip.innerHTML = attachments.map(attachment => {
+        const state = attachmentState(card, attachment);
+        const label = attachmentLabel(card, attachment);
+        const fileTitle = attachment.originalName || 'attachment';
+        return ''
+          + '<div class="attachment-card">'
+          +   '<button class="attachment-thumb" type="button" data-attachment-id="' + escHtml(attachment.id) + '" onclick="openAttachmentPreview(this.dataset.attachmentId)" title="' + escHtml(fileTitle) + '">'
+          +     '<img src="' + escHtml(attachmentUrl(card.id, attachment.id)) + '" alt="' + escHtml(fileTitle) + '" loading="lazy" onerror="handleAttachmentPreviewError(this)">'
+          +     '<div class="attachment-fallback">Preview unavailable</div>'
+          +   '</button>'
+          +   '<button class="attachment-remove" type="button" data-attachment-id="' + escHtml(attachment.id) + '" onclick="removeAttachment(this.dataset.attachmentId)" aria-label="Remove ' + escHtml(fileTitle) + '" title="Remove ' + escHtml(fileTitle) + '">×</button>'
+          +   '<div class="attachment-status attachment-status--' + escHtml(state) + '">' + escHtml(label) + '</div>'
+          +   '<div class="attachment-name" title="' + escHtml(fileTitle) + '">' + escHtml(fileTitle) + '</div>'
+          + '</div>';
+      }).join('');
+
+      empty.classList.toggle('hidden', attachments.length > 0);
+      dropzone.classList.toggle('is-disabled', attachmentUploadInFlight);
+      input.disabled = attachmentUploadInFlight;
+    }
+
+    async function uploadAttachments(files) {
+      if (!currentCardId || !files || !files.length || attachmentUploadInFlight) return;
+      attachmentUploadInFlight = true;
+      clearAttachmentError();
+      const dropzone = document.getElementById('modal-attachments-dropzone');
+      if (dropzone) dropzone.classList.add('drag-active');
+      try {
+        for (const file of Array.from(files)) {
+          const form = new FormData();
+          form.append('file', file);
+          const res = await fetch(BASE_PATH + '/api/cards/' + encodeURIComponent(currentCardId) + '/upload', {
+            method: 'POST',
+            body: form,
+            credentials: 'include',
+          });
+          if (!res.ok) {
+            const text = await res.text().catch(() => '');
+            throw new Error(text || ('Upload failed with HTTP ' + res.status));
+          }
+        }
+        await refreshState();
+      } catch (err) {
+        showAttachmentError(err.message || 'Upload failed.');
+      } finally {
+        attachmentUploadInFlight = false;
+        if (dropzone) dropzone.classList.remove('drag-active');
+        const input = document.getElementById('modal-attachments-input');
+        if (input) input.value = '';
+        const liveCard = currentCardId ? findCard(currentCardId) : null;
+        if (liveCard) renderAttachmentSection(liveCard);
+      }
+    }
+
+    function handleAttachmentInputChange(event) {
+      const files = event && event.target ? event.target.files : null;
+      void uploadAttachments(files);
+    }
+
+    function handleAttachmentDragOver(event) {
+      event.preventDefault();
+      const dropzone = document.getElementById('modal-attachments-dropzone');
+      if (dropzone) dropzone.classList.add('drag-active');
+    }
+
+    function handleAttachmentDragLeave(event) {
+      event.preventDefault();
+      const dropzone = document.getElementById('modal-attachments-dropzone');
+      if (dropzone) dropzone.classList.remove('drag-active');
+    }
+
+    function handleAttachmentDrop(event) {
+      event.preventDefault();
+      const dropzone = document.getElementById('modal-attachments-dropzone');
+      if (dropzone) dropzone.classList.remove('drag-active');
+      const files = event && event.dataTransfer ? event.dataTransfer.files : null;
+      void uploadAttachments(files);
+    }
+
+    async function removeAttachment(attachmentId) {
+      if (!currentCardId || !attachmentId) return;
+      clearAttachmentError();
+      try {
+        await apiFetch('/api/cards/' + currentCardId + '/attachments/' + attachmentId, {
+          method: 'DELETE',
+        });
+        await refreshState();
+      } catch (err) {
+        showAttachmentError(err.message || 'Failed to remove image.');
+      }
+    }
 
     // ─── Rendering ───────────────────────────────────────────────────────────
 
@@ -1378,6 +1799,10 @@ export function generateBoardHTML(basePath: string = ''): string {
       const modelBadgeHtml = card.modelBadgeLabel
         ? '<div class="mt-2"><span class="model-badge' + (card.modelState === 'unavailable' ? ' unavailable' : '') + '">' + escHtml(card.modelBadgeLabel) + '</span></div>'
         : '';
+      const attachmentSummary = cardAttachmentSummary(card);
+      const attachmentIndicatorHtml = attachmentSummary
+        ? '<div class="card-attachment-indicator" title="' + escHtml(attachmentSummary.title) + '">' + escHtml(attachmentSummary.label) + '</div>'
+        : '';
       const runningClass = status === 'running' ? ' running' : '';
       const sessionHtml = card.sessionId
         ? '<div class="text-xs text-gray-500 mt-2">OpenClaw · ' + escHtml(String(card.sessionId).slice(0, 8)) + '</div>'
@@ -1407,6 +1832,7 @@ export function generateBoardHTML(basePath: string = ''): string {
           </div>
           \${attentionPillHtml}
           \${questionPreviewHtml}
+          \${attachmentIndicatorHtml}
           \${tagsHtml}
           \${modelBadgeHtml}
           \${skillHtml}
@@ -1497,6 +1923,8 @@ export function generateBoardHTML(basePath: string = ''): string {
         : 'Opening the modal marks unread output and unread comments as read. Patrick-specific attention stays active until you clear it.';
       syncAttentionInputs();
 
+      renderAttachmentSection(card);
+
       // Skill
       const skillSection = document.getElementById('modal-skill-section');
       const skillDisplay = document.getElementById('modal-skill-display');
@@ -1569,6 +1997,8 @@ export function generateBoardHTML(basePath: string = ''): string {
       document.getElementById('modal-tags').value = (card.tags || []).join(', ');
       modelCatalogError = null;
       clearModelSaveError();
+      clearAttachmentError();
+      closeAttachmentPreview();
       refreshModalReadOnlyFields(card);
       document.getElementById('activity-comment-input').value = '';
       document.getElementById('reply-input').value = '';
@@ -1593,6 +2023,7 @@ export function generateBoardHTML(basePath: string = ''): string {
 
     function closeCardModal() {
       document.getElementById('card-modal').classList.add('hidden');
+      closeAttachmentPreview();
       currentCardId = null;
       currentCardActivity = [];
     }

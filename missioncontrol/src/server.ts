@@ -868,7 +868,7 @@ export async function handleApiRoute(url: URL, req: Request, config: MCConfig): 
 
     try {
       fs.mkdirSync(uploadDir, { recursive: true });
-      Bun.write(diskPath, bytes);
+      await Bun.write(diskPath, bytes);
     } catch (err: any) {
       const status = err?.code === 'ENOSPC' ? 507 : 500;
       return Response.json({ error: err?.code === 'ENOSPC' ? 'Disk is full — unable to store upload' : `Failed to store upload: ${err.message}` }, { status });
@@ -1226,6 +1226,7 @@ export async function handleApiRoute(url: URL, req: Request, config: MCConfig): 
     const cardId = deleteMatch[1];
     try {
       cancelActiveRun(cardId, 'card deleted');
+      safeRemoveCardUploadsDir(cardId);
       deleteCard(config, cardId);
       return Response.json({ ok: true });
     } catch (err: any) {
