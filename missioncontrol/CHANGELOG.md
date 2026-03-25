@@ -1,5 +1,49 @@
 # Mission Control — Changelog
 
+## 2026-03-24 — Multimedia Card Descriptions (Image Attachments)
+
+### What changed
+
+Mission Control cards can now carry **image attachments** that the next agent run can actually see.
+
+**Before:** Card descriptions were text-only. If Patrick wanted an agent to work from a mockup or screenshot, he had to describe it in words or manage file paths outside the board.
+
+**After:** The card modal exposes an **`Images for agent context`** section. Uploading an image stores it under Mission Control's state directory, renders it in the modal as a thumbnail, and injects it into the next stage prompt via `[media attached: ...]` so the agent receives real visual context.
+
+### Files changed
+
+| File | What |
+|------|------|
+| `src/config.ts` | Added `uploadsDir` under Mission Control state and ensured it is created alongside logs |
+| `src/state.ts` | Added `CardAttachment` metadata and `attachments` array on cards |
+| `src/server.ts` | Added upload/serve/delete attachment routes, prompt injection, attachment usage stamping, and upload-dir cleanup on card delete |
+| `src/ui.ts` | Added modal attachment UI, thumbnail strip, preview flow, remove buttons, and compact board-level attachment indicator |
+| `test/missioncontrol-multimedia-ui.regression-1.test.ts` | Added regression coverage to ensure the attachment UI renders and the client script still boots |
+
+### New API behavior
+
+| Endpoint | Behavior |
+|----------|----------|
+| `POST /api/cards/:id/upload` | Accepts a single image upload, validates by magic bytes, stores it under `missioncontrol-uploads/<cardId>/`, and appends attachment metadata to the card |
+| `GET /api/cards/:id/attachments/:attachmentId` | Serves an uploaded attachment back to the board UI with the stored content type |
+| `DELETE /api/cards/:id/attachments/:attachmentId` | Removes a single attachment from both state and disk |
+
+### New UI behavior
+
+- **`Images for agent context`** section in the card modal
+- **Thumbnail strip** for existing attachments
+- **Click-to-preview** for uploaded images
+- **Remove-from-strip** flow for individual attachments
+- **Contextual tile indicator** like `📎 2 queued` or `📎 1 used`
+- **Queued vs used** attachment state based on whether the image has already been included in a stage run
+
+### Validation
+
+- Code Review initially blocked the card because the wrong feature had been implemented on the branch; the multimedia implementation was then rebuilt on a dedicated branch
+- QA found one critical issue: backend attachment routes existed but no browser-visible upload UI was present in the card modal
+- QA fixed and verified the browser-visible upload flow, delete flow, and board indicator; health score improved from `74` to `94`
+- PR #5 merged the QA-verified implementation into `feat/missioncontrol`
+
 ## 2026-03-22 — Durable OpenClaw Sessions
 
 ### What changed

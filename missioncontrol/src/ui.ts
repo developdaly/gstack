@@ -1858,7 +1858,7 @@ export function generateBoardHTML(basePath: string = ''): string {
         colEl.classList.remove('drag-over');
         const cardId = e.dataTransfer.getData('text/plain');
         const colId = colEl.dataset.columnId;
-        if (cardId && colId) {
+        if (cardId && colId && findColumnForCard(cardId) !== colId) {
           moveCard(cardId, colId);
         }
       });
@@ -2474,6 +2474,7 @@ export function generateBoardHTML(basePath: string = ''): string {
     }
 
     async function moveCard(cardId, columnId) {
+      if (findColumnForCard(cardId) === columnId) return;
       try {
         await apiFetch(\`/api/cards/\${cardId}/move\`, {
           method: 'POST',

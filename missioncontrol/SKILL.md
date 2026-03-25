@@ -5,8 +5,10 @@ description: |
   Visual Kanban board for managing agent tasks through a pipeline of gstack skills.
   Drag cards between columns (Backlog → Office Hours → CEO Review → Eng Review →
   Design → Implementation → Code Review → QA → Ship → Done) to trigger the
-  corresponding skill. Use when asked to "open mission control", "show the board",
-  "add a task", or "what needs to be done".
+  corresponding skill. Cards bind to durable sessions, support inline human replies,
+  and can carry image attachments so agents can see mockups/screenshots during stage runs.
+  Use when asked to "open mission control", "show the board", "add a task", or
+  "what needs to be done".
 allowed-tools:
   - Bash
   - Read
@@ -294,7 +296,7 @@ plan's living status.
 
 # Mission Control: Visual Agent Task Manager
 
-Kanban board for managing agent tasks through gstack's skill pipeline.
+Kanban board for managing agent tasks through gstack's skill pipeline. Cards bind to durable OpenClaw sessions, support inline human replies, and can carry image attachments so agents can see mockups/screenshots during stage runs.
 
 ## Quick Start
 
@@ -338,5 +340,7 @@ When `$K process` shows pending cards, execute the corresponding skill for each:
 ## Environment Variables
 
 - `MISSION_CONTROL_PASSWORD` — Password for web UI auth (optional, no auth if unset)
-- `OPENCLAW_WEBHOOK_URL` — URL to fire webhooks when cards move to skill columns
+- `MC_OPENCLAW_AGENT_ID` — Agent id whose durable session store cards bind to (default: `main`)
+- `MC_AGENT_TIMEOUT_SECONDS` — Timeout for each `openclaw agent` stage run (default: `1800`)
+- `MC_BASE_PATH` — Optional URL prefix when Mission Control is served behind a subpath like `/missioncontrol`
 - `MC_PORT` — Override server port (default: random)

@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.11.12.0] - 2026-03-25 — Mission Control: same-column drag no-op fix
+
+### Fixed
+
+- **Mission Control: same-column drag no-op** — dragging a card within its own column (returning it to the same stage) no longer triggers the stage skill. Fixed in both the drag-and-drop drop handler and the shared `moveCard` client helper. Server-side guard in `state.ts` and `server.ts` was already in place from prior work; this patch restores the two client-side guards that were inadvertently dropped in the multimedia attachment branch.
+  - `missioncontrol/src/ui.ts`: drop handler now checks `findColumnForCard(cardId) !== colId` before calling `moveCard`
+  - `missioncontrol/src/ui.ts`: shared `moveCard` helper now exits early if `findColumnForCard(cardId) === columnId`
+  - Regression test `test/missioncontrol-same-column-noop.test.ts` verifies all three guard points
+
 ## [0.11.11.0] - 2026-03-23 — Mission Control: Awaiting Human workflow states + QA fix
 
 ### Added

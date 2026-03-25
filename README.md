@@ -160,7 +160,7 @@ Each skill feeds into the next. `/office-hours` writes a design doc that `/plan-
 | `/browse` | **QA Engineer** | Real Chromium browser, real clicks, real screenshots. ~100ms per command. |
 | `/setup-browser-cookies` | **Session Manager** | Import cookies from your real browser (Chrome, Arc, Brave, Edge) into the headless session. Test authenticated pages. |
 | `/autoplan` | **Review Pipeline** | One command, fully reviewed plan. Runs CEO → design → eng review automatically with encoded decision principles. Surfaces only taste decisions for your approval. |
-| `/missioncontrol` | **Mission Control** | Persistent visual Kanban board for tracking agent tasks. Cards bind to durable sessions — you see exactly where each agent is, reply to questions inline, and the agent picks up right where it left off. |
+| `/missioncontrol` | **Mission Control** | Persistent visual Kanban board for tracking agent tasks. Cards bind to durable sessions, support inline human replies, and can carry image attachments so agents can see mockups/screenshots during stage runs. |
 
 ### Power tools
 
@@ -201,7 +201,9 @@ I open sourced how I build software. You can fork it and make it your own.
 | [Architecture](ARCHITECTURE.md) | Design decisions and system internals |
 | [Browser Reference](BROWSER.md) | Full command reference for `/browse` |
 | [Contributing](CONTRIBUTING.md) | Dev setup, testing, contributor mode, and dev mode |
-| [Changelog](CHANGELOG.md) | What's new in every version |
+| [Changelog](CHANGELOG.md) | What's new in every gstack version |
+| [Mission Control Deploy Guide](missioncontrol/DEPLOY.md) | Northflank setup, proxying, and operational notes for Mission Control |
+| [Mission Control Release Notes](missioncontrol/CHANGELOG.md) | Feature-by-feature release history for the Mission Control app |
 
 ## Privacy & Telemetry
 
