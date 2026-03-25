@@ -20,7 +20,7 @@ Detailed guides for every gstack skill — philosophy, workflow, and examples.
 | [`/retro`](#retro) | **Eng Manager** | Team-aware weekly retro. Per-person breakdowns, shipping streaks, test health trends, growth opportunities. |
 | [`/browse`](#browse) | **QA Engineer** | Give the agent eyes. Real Chromium browser, real clicks, real screenshots. ~100ms per command. |
 | [`/setup-browser-cookies`](#setup-browser-cookies) | **Session Manager** | Import cookies from your real browser (Chrome, Arc, Brave, Edge) into the headless session. Test authenticated pages. |
-| [`/missioncontrol`](#missioncontrol) | **Mission Control** | Persistent visual Kanban board for tracking agent tasks. Cards bind to durable sessions — you see exactly where each agent is, reply to questions inline, and the agent picks up right where it left off. |
+| [`/missioncontrol`](#missioncontrol) | **Mission Control** | Persistent visual Kanban board for tracking agent tasks. Cards bind to durable sessions, support inline human replies, and can carry image attachments so agents can see mockups/screenshots during stage runs. |
 | | | |
 | **Multi-AI** | | |
 | [`/codex`](#codex) | **Second Opinion** | Independent review from OpenAI Codex CLI. Three modes: code review (pass/fail gate), adversarial challenge, and open consultation with session continuity. Cross-model analysis when both `/review` and `/codex` have run. |
@@ -749,9 +749,18 @@ Open a card to mark it read. The unread indicators clear automatically.
 
 Every meaningful event is logged to the card's activity trail: run started, question asked, human replied, stage changed, status updated. You get a full audit trail of what happened and when.
 
+### Agent context attachments
+
+Cards can now carry **image attachments** for agent-visible context. Upload screenshots or mockups in the card modal, and the next stage run injects them into the agent prompt so the model can actually see the reference material instead of relying on a text description.
+
+The board keeps this lightweight:
+- attachments render in the modal as a thumbnail strip
+- the tile shows a compact state like `📎 2 queued` or `📎 1 used`
+- uploads apply to the **next** run, not the currently active run
+
 ### Running Mission Control
 
-See [`missioncontrol/DEPLOY.md`](../missioncontrol/DEPLOY.md) for setup and environment variables. The quick version:
+See [`missioncontrol/DEPLOY.md`](../missioncontrol/DEPLOY.md) for setup and environment variables, and [`missioncontrol/CHANGELOG.md`](../missioncontrol/CHANGELOG.md) for the feature-by-feature release history of the board. The quick version:
 
 ```bash
 cd missioncontrol

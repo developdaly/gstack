@@ -4,9 +4,9 @@ Mission Control runs alongside OpenClaw on Northflank using the same wrapper ser
 
 ## Architecture
 
-## 2026-03-23 feature note
+## 2026-03-24 feature note
 
-The typed card timeline release does **not** require any new deployment-specific environment variables, proxy rules, or volume layout changes. It reuses the existing Mission Control server, board state file, and activity storage already described below.
+The multimedia card-description release does **not** require any new deployment-specific environment variables or proxy rules. It does add one new persistent directory under the existing Mission Control state root: `missioncontrol-uploads/`, which stores image attachments that are later injected into agent stage prompts.
 
 
 ```
@@ -20,9 +20,10 @@ Internet → Northflank (PORT 8080)
 Persistent volume: /data
   ├─ /data/.openclaw/          OpenClaw state
   ├─ /data/.gstack/            Mission Control state
-  │   ├─ missioncontrol.json        Board state (cards)
+  │   ├─ missioncontrol.json         Board state (cards)
   │   ├─ missioncontrol-server.json  Server state (pid, port, token)
-  │   └─ missioncontrol-logs/        Skill execution logs
+  │   ├─ missioncontrol-logs/        Skill execution logs
+  │   └─ missioncontrol-uploads/     Uploaded image attachments for card context
   └─ /data/npm, /data/pnpm     Package caches
 ```
 
