@@ -1,3 +1,20 @@
+export const MISSION_CONTROL_COLUMNS = [
+  { id: 'backlog', name: 'Backlog', skill: null, summary: 'New tasks waiting to be picked up.', detail: 'Raw incoming work lives here until someone moves it into the active workflow.', outcome: null, isCoreFlow: false },
+  { id: 'office-hours', name: 'Office Hours', skill: '/office-hours', summary: 'Start here. Reframe the problem before anyone writes code.', detail: 'Six forcing questions challenge the framing, surface better alternatives, and generate the design doc downstream stages build on.', outcome: 'Design Doc', isCoreFlow: true },
+  { id: 'ceo-review', name: 'CEO Review', skill: '/plan-ceo-review', summary: 'Pressure-test the idea and make sure the scope is worth shipping.', detail: 'Strategy review: challenge the plan, sharpen the product call, and decide whether to expand, hold, or cut scope.', outcome: 'Scope Decision', isCoreFlow: false },
+  { id: 'eng-review', name: 'Eng Review', skill: '/plan-eng-review', summary: 'Lock architecture, edge cases, tests, and performance expectations.', detail: 'Engineering review validates the execution plan so implementation starts with the right shape, not guesses.', outcome: 'Engineering Plan', isCoreFlow: true },
+  { id: 'design-review', name: 'Design Review', skill: '/plan-design-review', summary: 'Critique the UX direction and tighten the interaction model.', detail: 'Design review closes the gaps in hierarchy, states, responsiveness, and trust before pixels get coded.', outcome: 'Design Critique', isCoreFlow: false },
+  { id: 'design', name: 'Design', skill: '/design-consultation', summary: 'Define the design system: typography, color, layout, spacing, motion.', detail: 'This stage produces the shared visual language so the implementation feels intentional instead of improvised.', outcome: 'DESIGN.md', isCoreFlow: false },
+  { id: 'implementation', name: 'Implementation', skill: null, summary: 'Write the code for the chosen plan.', detail: 'This is where the approved plan turns into working product changes in the codebase.', outcome: 'Code', isCoreFlow: true },
+  { id: 'code-review', name: 'Code Review', skill: '/review', summary: 'Catch structural issues before landing.', detail: 'Pre-landing review looks for correctness, safety, and quality issues while the change is still cheap to fix.', outcome: 'Review Verdict', isCoreFlow: true },
+  { id: 'debug', name: 'Debug', skill: '/debug', summary: 'Investigate what broke and why.', detail: 'Use this when behavior is wrong, unclear, or flaky and the team needs a root-cause pass instead of more guessing.', outcome: 'Fix + Root Cause', isCoreFlow: false },
+  { id: 'qa', name: 'QA', skill: '/qa', summary: 'Test the feature like a user and verify fixes.', detail: 'QA checks the real user flow, finds regressions, and confirms the implementation actually works outside the happy path.', outcome: 'QA Report', isCoreFlow: true },
+  { id: 'ship', name: 'Ship', skill: '/ship', summary: 'Merge, version, changelog, push, and open the PR.', detail: 'This is the release step: package the work cleanly so it is ready to land and move forward with confidence.', outcome: 'Merged PR', isCoreFlow: true },
+  { id: 'docs', name: 'Docs', skill: '/document-release', summary: 'Update project docs to match what shipped.', detail: 'Sync README, architecture notes, and release documentation so future readers see the truth, not stale intent.', outcome: 'Updated Docs', isCoreFlow: false },
+  { id: 'retro', name: 'Retro', skill: '/retro', summary: 'Capture lessons from the work and the process.', detail: 'Use retrospective time to distill what worked, what hurt, and what should change next time.', outcome: 'Retro Report', isCoreFlow: false },
+  { id: 'done', name: 'Done', skill: null, summary: 'Finished work that is ready to archive visually.', detail: 'Completed cards live here so the active pipeline stays focused on work still in motion.', outcome: null, isCoreFlow: false },
+] as const;
+
 export function generateBoardHTML(basePath: string = ''): string {
   // Strip trailing slash from basePath
   const bp = basePath.replace(/\/+$/, '');
@@ -67,6 +84,157 @@ export function generateBoardHTML(basePath: string = ''): string {
       padding: 12px 12px 8px;
       flex-shrink: 0;
       border-bottom: 1px solid #4B5563;
+      border-top: 2px solid transparent;
+    }
+
+    .column-header--core {
+      border-top-color: rgba(96, 165, 250, 0.95);
+      box-shadow: inset 0 1px 0 rgba(191, 219, 254, 0.08);
+    }
+
+    .column-summary {
+      margin-top: 8px;
+      color: #D1D5DB;
+      font-size: 12px;
+      line-height: 1.45;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      overflow: hidden;
+    }
+
+    .column-outcome {
+      margin-top: 8px;
+      color: #9CA3AF;
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .column-outcome-label {
+      color: #6B7280;
+      margin-right: 4px;
+    }
+
+    .column-utility-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 8px;
+      min-height: 20px;
+    }
+
+    .column-core-pill {
+      display: inline-flex;
+      align-items: center;
+      height: 20px;
+      padding: 0 8px;
+      border-radius: 9999px;
+      background: rgba(59, 130, 246, 0.14);
+      border: 1px solid rgba(96, 165, 250, 0.28);
+      color: #BFDBFE;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      flex-shrink: 0;
+    }
+
+    .column-skill {
+      color: #6B7280;
+      font-size: 11px;
+      line-height: 1.3;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: right;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .column-details {
+      margin-top: 8px;
+    }
+
+    .column-details-toggle {
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      min-height: 44px;
+      padding: 8px 0 4px;
+      cursor: pointer;
+      color: #9CA3AF;
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.35;
+      user-select: none;
+    }
+
+    .column-details-toggle::-webkit-details-marker {
+      display: none;
+    }
+
+    .column-details-toggle:focus-visible {
+      outline: 2px solid rgba(96, 165, 250, 0.9);
+      outline-offset: 3px;
+      border-radius: 6px;
+    }
+
+    .column-details-toggle-copy {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .column-details-label-less {
+      display: none;
+    }
+
+    .column-details[open] .column-details-label-more {
+      display: none;
+    }
+
+    .column-details[open] .column-details-label-less {
+      display: inline;
+    }
+
+    .column-details-chevron {
+      color: #6B7280;
+      transition: transform 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .column-details[open] .column-details-chevron {
+      transform: rotate(180deg);
+    }
+
+    .column-detail-body {
+      padding: 2px 0 4px;
+      color: #D1D5DB;
+      font-size: 12px;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+
+    .column-detail-skill {
+      margin-top: 8px;
+      color: #6B7280;
+      font-size: 11px;
+      line-height: 1.35;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      word-break: break-all;
+    }
+
+    @media (max-width: 640px) {
+      .column-summary {
+        -webkit-line-clamp: 3;
+      }
+
+      .column-skill {
+        display: none;
+      }
     }
 
     .column-cards {
@@ -1092,22 +1260,7 @@ export function generateBoardHTML(basePath: string = ''): string {
 
   <script>
     const BASE_PATH = '${bp}';
-    const COLUMNS = [
-      { id: "backlog", name: "Backlog", skill: null },
-      { id: "office-hours", name: "Office Hours", skill: "/office-hours" },
-      { id: "ceo-review", name: "CEO Review", skill: "/plan-ceo-review" },
-      { id: "eng-review", name: "Eng Review", skill: "/plan-eng-review" },
-      { id: "design-review", name: "Design Review", skill: "/plan-design-review" },
-      { id: "design", name: "Design", skill: "/design-consultation" },
-      { id: "implementation", name: "Implementation", skill: null },
-      { id: "code-review", name: "Code Review", skill: "/review" },
-      { id: "debug", name: "Debug", skill: "/debug" },
-      { id: "qa", name: "QA", skill: "/qa" },
-      { id: "ship", name: "Ship", skill: "/ship" },
-      { id: "docs", name: "Docs", skill: "/document-release" },
-      { id: "retro", name: "Retro", skill: "/retro" },
-      { id: "done", name: "Done", skill: null },
-    ];
+    const COLUMNS = ${JSON.stringify(MISSION_CONTROL_COLUMNS)};
 
     const STATUS_COLORS = {
       idle: '#6B7280',
@@ -1518,7 +1671,8 @@ export function generateBoardHTML(basePath: string = ''): string {
         else cardsByColumn[col].push(card);
       });
 
-      // Check if we can do a targeted update vs full re-render
+      // Check if we can do a targeted update vs full re-render.
+      // Once columns exist, keep header DOM intact so native <details> state survives polling.
       const existingColumns = board.querySelectorAll('.column');
       if (existingColumns.length === COLUMNS.length) {
         // Targeted update: just re-render card lists
@@ -1542,14 +1696,45 @@ export function generateBoardHTML(basePath: string = ''): string {
 
     function renderColumn(col, cards) {
       const count = cards.length;
+      const summaryHtml = col.summary
+        ? '<div class="column-summary">' + escHtml(col.summary) + '</div>'
+        : '';
+      const outcomeHtml = col.outcome
+        ? '<div class="column-outcome"><span class="column-outcome-label">Produces:</span>' + escHtml(col.outcome) + '</div>'
+        : '';
+      const corePillHtml = col.isCoreFlow ? '<span class="column-core-pill">Core</span>' : '';
+      const utilityHtml = (corePillHtml || col.skill)
+        ? '<div class="column-utility-row">'
+          + corePillHtml
+          + (col.skill ? '<span class="column-skill">' + escHtml(col.skill) + '</span>' : '')
+          + '</div>'
+        : '';
+      const detailsHtml = col.detail
+        ? '<details class="column-details">'
+          + '<summary class="column-details-toggle">'
+          + '<span class="column-details-toggle-copy">'
+          + '<span class="column-details-label-more">More</span>'
+          + '<span class="column-details-label-less">Less</span>'
+          + '</span>'
+          + '<span class="column-details-chevron" aria-hidden="true">▾</span>'
+          + '</summary>'
+          + '<div class="column-detail-body">' + escHtml(col.detail)
+          + (col.skill ? '<div class="column-detail-skill">' + escHtml(col.skill) + '</div>' : '')
+          + '</div>'
+          + '</details>'
+        : '';
+      const headerClass = 'column-header' + (col.isCoreFlow ? ' column-header--core' : '');
       return \`
         <div class="column" data-column-id="\${col.id}">
-          <div class="column-header">
+          <div class="\${headerClass}">
             <div class="flex items-center justify-between mb-0.5">
               <span class="text-xs font-semibold uppercase tracking-wider text-gray-300">\${escHtml(col.name)}</span>
               <span class="column-count">\${count}</span>
             </div>
-            \${col.skill ? \`<div class="text-xs text-gray-500 font-mono mt-0.5">\${escHtml(col.skill)}</div>\` : '<div class="text-xs text-gray-600 mt-0.5">—</div>'}
+            \${summaryHtml}
+            \${outcomeHtml}
+            \${utilityHtml}
+            \${detailsHtml}
           </div>
           <div class="column-cards">
             \${renderCards(cards, col)}
